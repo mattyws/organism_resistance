@@ -8,7 +8,7 @@ from collections import Counter
 import sys
 import csv
 
-import trabalho_karin.helper as helper
+import helper
 import pandas as pd
 
 pp = pprint.PrettyPrinter(indent=5)
@@ -79,12 +79,6 @@ def split_into_columns(row, features_type):
             new_row[key] = row[key]
     return new_row
 
-
-def has_equal(itemid):
-    for item in helper.ARE_EQUAL:
-        if itemid in item:
-            return item[0]
-    return itemid
 
 def transform_to_row(filtered_events, features_type, prefix=""):
     row = dict()

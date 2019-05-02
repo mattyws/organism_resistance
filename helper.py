@@ -307,7 +307,7 @@ FEATURES_LABITEMS_TYPE = {
     '51301' : MEAN_LABEL,
     '50824' : MEAN_LABEL
 }
-# TODO: adicionar os novos itens iguais achados no git do mimic
+
 ARE_EQUAL_CHART = [
     ('723', '223900'), # -- GCSVerbal/GCS - Verbal Response
     ('454', '223901'), # -- GCSMotor/GCS - Motor Response

@@ -14,7 +14,7 @@ from sklearn.preprocessing.label import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 import numpy as np
 
-from trabalho_karin import helper
+import helper
 
 def write_on_log(file, text):
     print(text)
