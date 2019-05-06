@@ -8,7 +8,7 @@ from collections import Counter
 import sys
 import csv
 
-import trabalho_karin.helper as helper
+import helper
 import pandas as pd
 
 pp = pprint.PrettyPrinter(indent=5)
