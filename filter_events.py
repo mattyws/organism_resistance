@@ -65,7 +65,7 @@ datetime_pattern = "%Y-%m-%d %H:%M:%S"
 microbiologyevent_label = "microbiologyevents"
 features_event_label = ['chartevents', 'labevents']
 event_labels = ['CHARTEVENTS', 'LABEVENTS']
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 
 events_files_path = mimic_data_path + 'data_organism_resistence/'
 if not os.path.exists(events_files_path):
@@ -75,6 +75,14 @@ patients = pd.read_csv('sepsis3-df-no-exclusions.csv')
 patients = patients[patients["suspicion_poe"]]
 patients.loc[:, 'suspected_infection_time_poe'] = pd.to_datetime(patients['suspected_infection_time_poe'],
                                                                  format=datetime_pattern)
+patients.loc[:, 'intime'] = pd.to_datetime(patients['intime'], format=datetime_pattern)
+
+admissions = pd.read_csv('ADMISSIONS.csv')
+admissions['hadm_id'] = admissions['HADM_ID']
+
+patients = pd.merge(patients, admissions, how="inner", on=['hadm_id'])
+patients.loc[:, 'ADMITTIME'] = pd.to_datetime(patients['ADMITTIME'], format=datetime_pattern)
+
 json_files_path = mimic_data_path+"json/"
 # files_paths = []
 # for index, patient in patients.iterrows():
@@ -85,42 +93,50 @@ json_files_path = mimic_data_path+"json/"
 # Loop through all patients that fits the sepsis 3 definition
 dataset_csv = []
 hadm_ids_added = []
+ab_classes = get_antibiotics_classes()
 for index, row in patients.iterrows():
+    print("####### Admission {} #######".format(row['hadm_id']))
     year = row['suspected_infection_time_poe'].year
     json_path = json_files_path+str(year)+'/{}.json'.format(row['hadm_id'])
     if not os.path.exists(json_path):
         continue
     patient = json.load(open(json_path))
-    patient_age = get_patient_age(patient['subject_id'], patient['admittime'])
-    intime = datetime.strptime(patient['admittime'], datetime_pattern)
+    patient_age = row['age']# get_patient_age(patient['subject_id'], patient['admittime'])
+    intime = row['ADMITTIME'] # datetime.strptime(patient['admittime'], datetime_pattern)
     diff = row['suspected_infection_time_poe'] - intime
-    if diff.days > 0 or (diff.days == 0 and diff.seconds/3600 > 12):
-        print(intime, row['suspected_infection_time_poe'], diff)
+    if diff.days < 0 or (diff.days == 0 and diff.seconds/3600 < 12):
         continue
     events_in_patient = dict()
-    cut_poe = intime + timedelta(hours=24)
+    window_start = row['suspected_infection_time_poe'] - timedelta(hours=12)
+    cut_poe = row['suspected_infection_time_poe'] # intime + timedelta(hours=24)
     if microbiologyevent_label not in patient.keys() or (patient_age < 18 or patient_age > 80):
         print("Patient age: {}".format(patient_age))
         continue
-    organism_resistance = get_organism_class(patient[microbiologyevent_label], get_antibiotics_classes())
+    organism_resistance = get_organism_class(patient[microbiologyevent_label], ab_classes)
+    print(window_start, cut_poe, row['intime'])
     for feature_event_label in features_event_label:
+        print(len(patient[feature_event_label]))
         # Loading event csv
         if feature_event_label not in patient.keys():
             continue
         events_df = patient[feature_event_label]
         # Filter events that occurs between ICU intime and ICU outtime, as the csv corresponds to events that occurs
         # to all hospital admission
-        print("==== Looping events for {} ====".format(patient['hadm_id']))
+        print("==== Looping {} events for {} ====".format(feature_event_label, row['icustay_id']))
         for event in events_df:
             event['charttime'] = datetime.strptime(event['charttime'], datetime_pattern)
-            if event['charttime'] >= intime and event['charttime'] <= cut_poe:
+            if event['charttime'] >= window_start and event['charttime'] <= cut_poe:
                 # Get values and store into a variable, just to read easy and if the labels change
                 itemid = event['ITEMID']
                 event_timestamp = event['charttime']
                 event_value = event['valuenum']
-                if feature_event_label == 'chartevents' and itemid in helper.FEATURES_ITEMS_TYPE.keys():
-                    if helper.FEATURES_ITEMS_TYPE[itemid] == helper.CATEGORICAL_LABEL:
-                        event_value = event['value']
+                print(event_value)
+                if event['valuenum'] is None:
+                    print(itemid)
+                    exit()
+                # if feature_event_label == 'chartevents' and itemid in helper.FEATURES_ITEMS_TYPE.keys():
+                #     if helper.FEATURES_ITEMS_TYPE[itemid] == helper.CATEGORICAL_LABEL:
+                #         event_value = event['value']
                 # If the id is not in events yet, create it and assign a empty dictionary to it
                 if event_timestamp not in events_in_patient.keys():
                     events_in_patient[event_timestamp] = dict()
@@ -134,25 +150,32 @@ for index, row in patients.iterrows():
                 else:
                     # Else just create the field and assign its value
                     events_in_patient[event_timestamp][feature_event_label+'_'+itemid] = event_value
-        print("Converting to dataframe")
-        patient_data = pd.DataFrame([])
-        for event_timestamp in events_in_patient.keys():
-            events = pd.DataFrame(events_in_patient[event_timestamp], index=[0])
-            patient_data = pd.concat([patient_data, events], ignore_index=True)
-        if len(patient_data) != 0:
-            print("==== Creating csv ====")
-            patient_data.to_csv(events_files_path + '{}.csv'.format(patient['hadm_id']), quoting=csv.QUOTE_NONNUMERIC,
-                                index=False)
-        else:
-            print("Error in file {}, events is empty".format(patient['hadm_id']))
+    print("Converting to dataframe")
+    patient_data = pd.DataFrame([])
+    for event_timestamp in events_in_patient.keys():
+        events = pd.DataFrame(events_in_patient[event_timestamp], index=[0])
+        patient_data = pd.concat([patient_data, events], ignore_index=True)
+    if len(patient_data) != 0:
+        print("==== Creating csv ====")
+        patient_data.to_csv(events_files_path + '{}.csv'.format(row['icustay_id']), quoting=csv.QUOTE_NONNUMERIC,
+                            index=False)
+    else:
+        print("Error in file {}, events is empty".format(patient['hadm_id']))
     if patient['hadm_id'] not in hadm_ids_added:
         dataset_csv.append(
-            {'hadm_id': patient['hadm_id'],
-             'admittime': patient['admittime'],
+            {'hadm_id': row['hadm_id'],
+             'icustay_id' : row['icustay_id'],
+             'intime': row['intime'],
+             'admittime': row['ADMITTIME'],
              'class': organism_resistance,
+             'sex' : row['gender'],
+             'age' : row['age'],
+             'ethnicity' : row['ethnicity']
              }
         )
-        hadm_ids_added.append(patient['hadm_id'])
+        hadm_ids_added.append(row['icustay_id'])
+    print(row['ADMITTIME'], row['intime'], row['suspected_infection_time_poe'])
+    break
 dataset_csv = pd.DataFrame(dataset_csv)
 # print(len(dataset_csv))
 dataset_csv.to_csv('dataset.csv')
