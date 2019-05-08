@@ -385,6 +385,14 @@ def get_patients_previous_admissions(patient_id, current_admit_id, current_admit
             if difference >= 0 and difference <= 1 :
                 num_previous_admission += 1
     return num_previous_admission
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+events_files_path = mimic_data_path + 'data_organism_resistence/'
+
+
+dataset_patients = pd.read_csv('dataset.csv')
+for patient in dataset_patients:
+    patient_csv = pd.read_csv(events_files_path+'{}.csv'.format(patient['icustay_id']))
+exit()
 
 print("========== Generating patient admissions dictionary ==========")
 patients_admissions = generate_patient_admissions_dict()
