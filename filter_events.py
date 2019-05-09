@@ -171,7 +171,9 @@ for index, row in patients.iterrows():
                  'class': organism_resistance,
                  'sex': row['gender'],
                  'age': row['age'],
-                 'ethnicity': row['ethnicity']
+                 'ethnicity': row['ethnicity'],
+                 'window_starttime': window_start,
+                 'window_endtime': cut_poe
                  }
             )
             hadm_ids_added.append(row['icustay_id'])

@@ -267,7 +267,9 @@ def transform_all_features_to_row(events, prefix=""):
                         elif row[key][i].lower() == 'mod':
                             row[key][i] = None
                         else:
+                            # Doest have the case, remove it from the keys
                             print(row[key][i], "====================================================")
+                            row[key][i] = None
                             continue
                 row[key] = [w for w in row[key] if w is not None]
                 try:
@@ -385,14 +387,6 @@ def get_patients_previous_admissions(patient_id, current_admit_id, current_admit
             if difference >= 0 and difference <= 1 :
                 num_previous_admission += 1
     return num_previous_admission
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
-events_files_path = mimic_data_path + 'data_organism_resistence/'
-
-
-dataset_patients = pd.read_csv('dataset.csv')
-for patient in dataset_patients:
-    patient_csv = pd.read_csv(events_files_path+'{}.csv'.format(patient['icustay_id']))
-exit()
 
 print("========== Generating patient admissions dictionary ==========")
 patients_admissions = generate_patient_admissions_dict()

@@ -31,6 +31,9 @@ if parameters is None:
 
 dataset_patients = pd.read_csv(parameters['datasetCsvFilePath'])
 dataset_patients.loc[:,'admittime'] = pd.to_datetime(dataset_patients['admittime'], format=DATETIME_PATTERN)
+dataset_patients.loc[:,'intime'] = pd.to_datetime(dataset_patients['intime'], format=DATETIME_PATTERN)
+dataset_patients.loc[:,'window_starttime'] = pd.to_datetime(dataset_patients['window_starttime'], format=DATETIME_PATTERN)
+dataset_patients.loc[:,'window_endtime'] = pd.to_datetime(dataset_patients['window_endtime'], format=DATETIME_PATTERN)
 features_chartevents = ['chartevents_'+key for key in list(helper.FEATURES_ITEMS_LABELS.keys())]
 features_labevents = ['labevents_'+key for key in list(helper.FEATURES_LABITEMS_LABELS.keys())]
 all_features = features_chartevents
@@ -49,16 +52,16 @@ classes = dataset_patients['class'].tolist()
 # print(" ======= Selecting random sample ======= ")
 # dataTrain, dataTest, labelsTrain, labelsTest = train_test_split(dataset_patients['hadm_id'].tolist(), classes,
 #                                                                 stratify=classes, test_size=0.8)
-dataTrain = dataset_patients['hadm_id']
+dataTrain = dataset_patients['icustay_id']
 labelsTrain = classes
-for hadmid, hadm_class in zip(dataTrain, labelsTrain):
-    print("===== {} =====".format(hadmid))
-    if not os.path.exists(parameters['datasetFilesPath']+'{}.csv'.format(hadmid)):
+for icustayid, icustay_class in zip(dataTrain, labelsTrain):
+    print("===== {} =====".format(icustayid))
+    if not os.path.exists(parameters['datasetFilesPath']+'{}.csv'.format(icustayid)):
         continue
     # Get patient row from dataset csv
-    patient = dataset_patients[dataset_patients['hadm_id'] == hadmid].iloc[0]
+    patient = dataset_patients[dataset_patients['icustay_id'] == icustayid].iloc[0]
     # Loading events
-    events = pd.read_csv(parameters['datasetFilesPath'] +'{}.csv'.format(hadmid))
+    events = pd.read_csv(parameters['datasetFilesPath'] +'{}.csv'.format(icustayid))
     events.loc[:,'event_timestamp'] = pd.to_datetime(events['event_timestamp'], format=DATETIME_PATTERN)
     # The data representation is the features ordered by id
     events = events.set_index(['event_timestamp']).sort_index()
@@ -70,9 +73,9 @@ for hadmid, hadm_class in zip(dataTrain, labelsTrain):
         events[itemid] = pd.Series(empty_events, index=events.index)
     # Filtering
     events = events[[itemid for itemid in events.columns if '_'.join(itemid.split('_')[0:2]) in all_features]]
-    time_bucket = patient['admittime']
+    time_bucket = patient['window_starttime']
     buckets = dict()
-    while time_bucket < patient['admittime'] + timedelta(hours=24):
+    while time_bucket <= patient['window_endtime']:
         timestamps = []
         for index in events.index:
             diff = time_bucket - index
@@ -91,4 +94,4 @@ for hadmid, hadm_class in zip(dataTrain, labelsTrain):
     events_buckets = events_buckets.sort_index()
     events_buckets = events_buckets.fillna(0)
     # Create data file from the buckets
-    events_buckets.to_csv(parameters['dataPath'] + '{}.csv'.format(hadmid))
+    events_buckets.to_csv(parameters['dataPath'] + '{}.csv'.format(icustayid))
