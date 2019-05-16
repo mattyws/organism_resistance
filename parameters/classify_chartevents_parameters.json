@@ -1,9 +1,10 @@
 {
-    "datasetFilesPath": "/home/mattyws/Documents/mimic_data/data_organism_resistence_binary/",
+    "datasetFilesPath": "/home/mattyws/Documents/mimic_data/data_organism_resistence/",
+    "datasetFilesPathBinary": "/home/mattyws/Documents/mimic_data/data_organism_resistence_binary/",
     "datasetCsvFilePath": "dataset.csv",
     "modelCheckpointPath": "chartevents_checkpoint/",
     "modelConfigPath": "chartevents_checkpoint/config.json",
-    "dataPath" : "./data/",
+    "dataPath" : "./data_binary/",
     "trainingDataPath" :  "./dataTrainigChartevents/",
     "testingDataPath" : "./dataTestChartevents/",
     "datasetFilesFileName": "datasetFiles.pkl",
@@ -11,20 +12,18 @@
     "trainingGeneratorPath": "chartevents_checkpoint/dataTrainGenerator.pkl",
     "testingGeneratorPath": "chartevents_checkpoint/dataTestGenerator.pkl",
     "resultFilePath": "chartevents_checkpoint/result.csv",
-    "dataLength" : 24,
+    "dataLength" : 13,
     "outputUnits": [
-        256,
-        128
+        64
     ],
     "numOutputNeurons": 1,
     "loss": "binary_crossentropy",
     "layersActivations": [
-        "relu",
         "relu"
     ],
     "gru": false,
     "useDropout": true,
     "dropout": 0.4,
-    "trainingEpochs": 30,
-    "batchSize": 40
+    "trainingEpochs": 100,
+    "batchSize": 100
 }

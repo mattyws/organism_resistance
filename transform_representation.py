@@ -47,7 +47,7 @@ item_label = 'ITEM'
 def transform_values(row, features_type):
     for key in row:
         itemid = helper.get_itemid_from_key(key)
-        if row[key] is not None and features_type[itemid] == helper.MEAN_LABEL:
+        if row[key] is not None and features_type[itemid] == helper.NUMERIC_LABEL:
             mean = 0
             std = 0
             if len(row[key]) > 1:
@@ -66,7 +66,7 @@ def split_into_columns(row, features_type):
     new_row = dict()
     for key in row:
         itemid = helper.get_itemid_from_key(key)
-        if features_type[itemid] == helper.MEAN_LABEL:
+        if features_type[itemid] == helper.NUMERIC_LABEL:
             if row[key] is not None:
                 for key2 in row[key]:
                     # new_row[key+"_"+key2] = row[key][key2]
@@ -85,14 +85,14 @@ def transform_to_row(filtered_events, features_type, prefix=""):
     for event in filtered_events:
         itemid = event[itemid_label]
         event_type  = features_type[itemid]
-        if prefix+itemid not in row.keys() and event_type == helper.MEAN_LABEL :
+        if prefix+itemid not in row.keys() and event_type == helper.NUMERIC_LABEL :
             row[prefix+itemid] = []
         elif event_type == helper.CATEGORICAL_LABEL:
             row[prefix+itemid] = []
         elif event_type == helper.YESNO_LABEL:
             row[prefix+itemid] = 0
 
-        if event_type == helper.MEAN_LABEL :
+        if event_type == helper.NUMERIC_LABEL :
             try:
                 if itemid in helper.FARENHEIT_ID:
                     row[prefix + itemid].append(helper.CELCIUS(float(event[valuenum_label])))

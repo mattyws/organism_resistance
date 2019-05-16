@@ -39,15 +39,17 @@ class KerasGeneratorAdapter(ModelAdapter):
         self.model = model
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
-            validationSteps=None, callbacks=None):
+            validationSteps=None, callbacks=None, class_weight=None):
         self.model.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
-                                 callbacks=callbacks)
+                                 callbacks=callbacks, class_weight=class_weight)
 
     def predict(self, testDocs, batch_size=10):
         result = []
-        for data in testDocs:
-            result.append(self.model.predict_classes(data, batch_size, verbose=1))
+        for i in range(len(testDocs)):
+            data, y = testDocs[i]
+            result.extend(list(self.model.predict_classes(data, batch_size, verbose=1)))
+        result = [x[0] for x in result]
         return result
 
     def predict_one(self, doc):

@@ -38,31 +38,16 @@ class RandIntMatrix(object):
 # generate_random_numbers_tuple()
 
 PARAM_DISTS = {
-    type(DecisionTreeClassifier()): {
-        'criterion': ['gini', 'entropy'],
-        'max_depth': sp_randint(3, 8)
-    },
-    type(SVC()): {
-        'C': sp_expon(scale=100),
-        'gamma': sp_expon(scale=.1),
-        'max_iter': [300],
-        'kernel': ['rbf', 'linear', 'sigmoid'],
-    },
     type(MLPClassifier()): {
         'hidden_layer_sizes': RandIntMatrix(12, 128),
         'max_iter': [500],
         'activation': ['relu', 'tanh', 'logistic']
     },
-    type(RandomForestClassifier()): {
-        'n_estimators': sp_randint(10, 25),
-        'criterion': ['gini', 'entropy'],
-        'max_depth': [3, 5, 7, None]
-    }
 }
 
 YESNO_LABEL = "yes/no"
 CATEGORICAL_LABEL = "categorical"
-MEAN_LABEL = "mean"
+NUMERIC_LABEL = "numeric"
 
 FEATURES_ITEMS_LABELS = {
     # '5656' : 'Phenylephrine',
@@ -92,6 +77,8 @@ FEATURES_ITEMS_LABELS = {
     '7622' : 'Arterial Blood Pressure mean',
     '53' : 'Arterial Blood Pressure mean',
     '443' : 'Arterial Blood Pressure mean',
+    '456' : 'NBP MEAN',
+    '6702' : 'Arterial Blood Pressure mean',
     '224167' : 'BPs L',
     '224643' : 'BPd L',
     '227243' : 'BPs R',
@@ -125,6 +112,7 @@ FEATURES_ITEMS_LABELS = {
     '618' : 'Respiratory Rate',
     '220210' : 'Respiratory Rate',
     '224690' : 'Respiratory Rate (Total)',
+    '615' : 'Respiratory Rate (Total)',
     '676' : 'Temperature Celsius',
     '223762' : 'Temperature Celsius',
     '678' : 'Temperature Celsius',
@@ -132,7 +120,16 @@ FEATURES_ITEMS_LABELS = {
     '227687' : 'Tobacco Use History',
     '225108' : 'Tobacco Use History',
     '720' : 'Ventilator Mode',
-    '223849' : 'Ventilator Mode'
+    '223849' : 'Ventilator Mode',
+    '646' : 'SPO2',
+    '807' : 'Fingerstick glucose',
+    '811' : 'Fingerstick glucose',
+    '1529' : 'Fingerstick glucose',
+    '3745' : 'Fingerstick glucose',
+    '3744' : 'Fingerstick glucose',
+    '225664' : 'Fingerstick glucose',
+    '220621' : 'Fingerstick glucose',
+    '226537' : 'Fingerstick glucose'
 }
 
 FEATURES_ITEMS_TYPE = {
@@ -145,28 +142,30 @@ FEATURES_ITEMS_TYPE = {
     # '2445' : YESNO_LABEL,
     # '30051' : YESNO_LABEL,
     # '222315' : YESNO_LABEL,
-    '220052' : MEAN_LABEL,
-    '52' : MEAN_LABEL,
-    '3312' : MEAN_LABEL,
-    '5679' : MEAN_LABEL,
-    '225312' : MEAN_LABEL,
-    '5600' : MEAN_LABEL,
-    '3256' : MEAN_LABEL,
-    '3314' : MEAN_LABEL,
-    '3316' : MEAN_LABEL,
-    '3320' : MEAN_LABEL,
-    '3322' : MEAN_LABEL,
-    '5731' : MEAN_LABEL,
-    '2732' : MEAN_LABEL,
-    '7618' : MEAN_LABEL,
-    '7620' : MEAN_LABEL,
-    '7622' : MEAN_LABEL,
-    '53' : MEAN_LABEL,
-    '443' : MEAN_LABEL,
-    '224167' : MEAN_LABEL,
-    '224643' : MEAN_LABEL,
-    '227243' : MEAN_LABEL,
-    '227242' : MEAN_LABEL,
+    '220052' : NUMERIC_LABEL,
+    '52' : NUMERIC_LABEL,
+    '3312' : NUMERIC_LABEL,
+    '5679' : NUMERIC_LABEL,
+    '225312' : NUMERIC_LABEL,
+    '5600' : NUMERIC_LABEL,
+    '3256' : NUMERIC_LABEL,
+    '3314' : NUMERIC_LABEL,
+    '3316' : NUMERIC_LABEL,
+    '3320' : NUMERIC_LABEL,
+    '3322' : NUMERIC_LABEL,
+    '5731' : NUMERIC_LABEL,
+    '2732' : NUMERIC_LABEL,
+    '7618' : NUMERIC_LABEL,
+    '7620' : NUMERIC_LABEL,
+    '7622' : NUMERIC_LABEL,
+    '53' : NUMERIC_LABEL,
+    '443' : NUMERIC_LABEL,
+    '456' : NUMERIC_LABEL,
+    '6702' : NUMERIC_LABEL,
+    '224167' : NUMERIC_LABEL,
+    '224643' : NUMERIC_LABEL,
+    '227243' : NUMERIC_LABEL,
+    '227242' : NUMERIC_LABEL,
     '228332' : CATEGORICAL_LABEL, # YES_NO
     '220739' : CATEGORICAL_LABEL, # Era MEAN
     '184' : CATEGORICAL_LABEL, # --
@@ -174,37 +173,105 @@ FEATURES_ITEMS_TYPE = {
     '454' : CATEGORICAL_LABEL, # --
     '223900' : CATEGORICAL_LABEL, # --
     '723' : CATEGORICAL_LABEL, # --
-    '211' : MEAN_LABEL,
-    '220045' : MEAN_LABEL,
-    '223835' : MEAN_LABEL,
-    '448' : MEAN_LABEL,
-    '224687' : MEAN_LABEL,
-    '220181' : MEAN_LABEL,
+    '211' : NUMERIC_LABEL,
+    '220045' : NUMERIC_LABEL,
+    '223835' : NUMERIC_LABEL,
+    '448' : NUMERIC_LABEL,
+    '224687' : NUMERIC_LABEL,
+    '220181' : NUMERIC_LABEL,
     '226732' : CATEGORICAL_LABEL,
     '467' : CATEGORICAL_LABEL,
-    '220277' : MEAN_LABEL,
+    '615' : NUMERIC_LABEL,
+    '220277' : NUMERIC_LABEL,
     '1046' : CATEGORICAL_LABEL, # YESNO
     '223781' : CATEGORICAL_LABEL, # YESNO
-    '535' : MEAN_LABEL,
-    '224695' : MEAN_LABEL,
-    '505' : MEAN_LABEL,
-    '6924' : MEAN_LABEL,
-    '543' : MEAN_LABEL,
-    '224696' : MEAN_LABEL,
+    '535' : NUMERIC_LABEL,
+    '224695' : NUMERIC_LABEL,
+    '505' : NUMERIC_LABEL,
+    '6924' : NUMERIC_LABEL,
+    '543' : NUMERIC_LABEL,
+    '224696' : NUMERIC_LABEL,
     '616' : CATEGORICAL_LABEL, # YESNO
     '223990' : CATEGORICAL_LABEL, # YESNO
-    '618' : MEAN_LABEL,
-    '220210' : MEAN_LABEL,
-    '224690' : MEAN_LABEL,
-    '676' : MEAN_LABEL,
-    '223762' : MEAN_LABEL,
-    '678' : MEAN_LABEL,
-    '223761' : MEAN_LABEL,
+    '618' : NUMERIC_LABEL,
+    '220210' : NUMERIC_LABEL,
+    '224690' : NUMERIC_LABEL,
+    '676' : NUMERIC_LABEL,
+    '223762' : NUMERIC_LABEL,
+    '678' : NUMERIC_LABEL,
+    '223761' : NUMERIC_LABEL,
     '227687' : CATEGORICAL_LABEL, # YESNO
     '225108' : CATEGORICAL_LABEL, # YESNO
     '720' : CATEGORICAL_LABEL,
-    '223849' : CATEGORICAL_LABEL
+    '223849' : CATEGORICAL_LABEL,
+    '646' : NUMERIC_LABEL,
+    '807': NUMERIC_LABEL,
+    '811': NUMERIC_LABEL,
+    '1529': NUMERIC_LABEL,
+    '3745': NUMERIC_LABEL,
+    '3744': NUMERIC_LABEL,
+    '225664': NUMERIC_LABEL,
+    '220621': NUMERIC_LABEL,
+    '226537': NUMERIC_LABEL
 }
+
+ARE_EQUAL_CHART = [
+    ('723', '223900'), # -- GCSVerbal/GCS - Verbal Response
+    ('454', '223901'), # -- GCSMotor/GCS - Motor Response
+    ('184', '220739'), #  -- GCSEyes/GCS - Eye Opening
+    ('211', '220045'), # -- HEART RATE
+    ('220052', '220181'), # -- MEAN ARTERIAL PRESSURE
+    ('220052', '52'),
+    ('220052', '3312'),
+    ('220052', '5679'),
+    ('220052', '225312'),
+    ('220052', '5600'),
+    ('220052', '3256'),
+    ('220052', '3314'),
+    ('220052', '3316'),
+    ('220052', '3320'),
+    ('220052', '3322'),
+    ('220052', '5731'),
+    ('220052', '2732'),
+    ('220052', '7618'),
+    ('220052', '7620'),
+    ('220052', '7622'),
+    ('220052', '53'),
+    ('220052', '443'),
+    ('220052', '456'),
+    ('220052', '6702'),
+
+    ('618', '224690'), # -- RESPIRATORY RATE
+    ('618', '615'),
+    ('618', '220210'),
+
+    ('646', '220277'), # -- SPO2, peripheral
+
+    ('807', '811'), # -- GLUCOSE, both lab and fingerstick
+    ('807', '1529'),
+    ('807', '3745'),
+    ('807', '3744'),
+    ('807', '225664'),
+    ('807', '220621'),
+    ('807', '226537'),
+
+    ('467', '226732'), # -- O2 Delivery Device
+    ('467', '468'),
+    ('448', '224687'), # -- Minute Volume
+
+    ('1046', '223781'), # -- Pain Present
+    ('535', '224695'), # -- Peak Insp. Pressure
+    ('505', '6924' ), # -- PEEP
+    ('543', '224696'), # -- Plateau Pressure
+    ('616', '223990'), # -- Respiratory Effort
+
+    ('720', '223849'), # -- Ventilator Mode
+    ('676', '678'), # -- Temperature Celsius
+    ('676', '223761'),
+    ('676', '223762'),
+
+    ('225108', '227687'), # -- Tobacco Use History
+]
 
 FEATURES_LABITEMS_LABELS = {
     '50861' : 'Alanine Aminotransferase (ALT)',
@@ -254,116 +321,66 @@ FEATURES_LABITEMS_LABELS = {
     '51003' : 'Troponin T',
     '51006' : 'Urea Nitrogen',
     '51301' : 'White Blood Cells',
-    '50824' : 'Sodium, Whole Blood'
+    '50824' : 'Sodium, Whole Blood',
+    '50931' : 'Glucose',
+    '50810' : 'Hematocrit',
+    '51300' : 'WBC Count'
 }
 
 FEATURES_LABITEMS_TYPE = {
-    '50861' : MEAN_LABEL,
-    '50862' : MEAN_LABEL,
-    '50863' : MEAN_LABEL,
-    '50801' : MEAN_LABEL,
-    '50866' : MEAN_LABEL,
-    '50868' : MEAN_LABEL,
-    '50878' : MEAN_LABEL,
-    '51144' : MEAN_LABEL,
-    '50802' : MEAN_LABEL,
-    '50882' : MEAN_LABEL,
-    '50803' : MEAN_LABEL,
-    '50885' : MEAN_LABEL,
-    '50893' : MEAN_LABEL,
-    '50902' : MEAN_LABEL,
-    '50806' : MEAN_LABEL,
-    '50910' : MEAN_LABEL,
-    '50912' : MEAN_LABEL,
-    '51200' : MEAN_LABEL,
-    '50809' : MEAN_LABEL,
-    '51221' : MEAN_LABEL,
-    '51222' : MEAN_LABEL,
-    '50811' : MEAN_LABEL,
-    '51237' : MEAN_LABEL,
-    '50813' : MEAN_LABEL,
-    '50954' : MEAN_LABEL,
-    '51244' : MEAN_LABEL,
-    '50960' : MEAN_LABEL,
-    '51256' : MEAN_LABEL,
-    '50963' : MEAN_LABEL,
-    '50816' : MEAN_LABEL,
-    '50817' : MEAN_LABEL,
-    '50818' : MEAN_LABEL,
-    '50820' : MEAN_LABEL,
-    '50970' : MEAN_LABEL,
-    '51265' : MEAN_LABEL,
-    '50821' : MEAN_LABEL,
-    '50971' : MEAN_LABEL,
-    '50822' : MEAN_LABEL,
-    '50889' : MEAN_LABEL,
-    '51274' : MEAN_LABEL,
-    '51275' : MEAN_LABEL,
-    '51277' : MEAN_LABEL,
-    '51279' : MEAN_LABEL,
-    '50983' : MEAN_LABEL,
-    '51003' : MEAN_LABEL,
-    '51006' : MEAN_LABEL,
-    '51301' : MEAN_LABEL,
-    '50824' : MEAN_LABEL
+    '50861' : NUMERIC_LABEL,
+    '50862' : NUMERIC_LABEL,
+    '50863' : NUMERIC_LABEL,
+    '50801' : NUMERIC_LABEL,
+    '50866' : NUMERIC_LABEL,
+    '50868' : NUMERIC_LABEL,
+    '50878' : NUMERIC_LABEL,
+    '51144' : NUMERIC_LABEL,
+    '50802' : NUMERIC_LABEL,
+    '50882' : NUMERIC_LABEL,
+    '50803' : NUMERIC_LABEL,
+    '50885' : NUMERIC_LABEL,
+    '50893' : NUMERIC_LABEL,
+    '50902' : NUMERIC_LABEL,
+    '50806' : NUMERIC_LABEL,
+    '50910' : NUMERIC_LABEL,
+    '50912' : NUMERIC_LABEL,
+    '51200' : NUMERIC_LABEL,
+    '50809' : NUMERIC_LABEL,
+    '51221' : NUMERIC_LABEL,
+    '51222' : NUMERIC_LABEL,
+    '50811' : NUMERIC_LABEL,
+    '51237' : NUMERIC_LABEL,
+    '50813' : NUMERIC_LABEL,
+    '50954' : NUMERIC_LABEL,
+    '51244' : NUMERIC_LABEL,
+    '50960' : NUMERIC_LABEL,
+    '51256' : NUMERIC_LABEL,
+    '50963' : NUMERIC_LABEL,
+    '50816' : NUMERIC_LABEL,
+    '50817' : NUMERIC_LABEL,
+    '50818' : NUMERIC_LABEL,
+    '50820' : NUMERIC_LABEL,
+    '50970' : NUMERIC_LABEL,
+    '51265' : NUMERIC_LABEL,
+    '50821' : NUMERIC_LABEL,
+    '50971' : NUMERIC_LABEL,
+    '50822' : NUMERIC_LABEL,
+    '50889' : NUMERIC_LABEL,
+    '51274' : NUMERIC_LABEL,
+    '51275' : NUMERIC_LABEL,
+    '51277' : NUMERIC_LABEL,
+    '51279' : NUMERIC_LABEL,
+    '50983' : NUMERIC_LABEL,
+    '51003' : NUMERIC_LABEL,
+    '51006' : NUMERIC_LABEL,
+    '51301' : NUMERIC_LABEL,
+    '50824' : NUMERIC_LABEL,
+    '50931' : NUMERIC_LABEL,
+    '50810' : NUMERIC_LABEL,
+    '51300' : NUMERIC_LABEL
 }
 
-ARE_EQUAL_CHART = [
-    ('723', '223900'), # -- GCSVerbal/GCS - Verbal Response
-    ('454', '223901'), # -- GCSMotor/GCS - Motor Response
-    ('184', '220739'), #  -- GCSEyes/GCS - Eye Opening
-    ('211', '220045'), # -- HEART RATE
-    ('220052', '220181'), # -- MEAN ARTERIAL PRESSURE
-    ('220052', '52'),
-    ('220052', '3312'),
-    ('220052', '5679'),
-    ('220052', '225312'),
-    ('220052', '5600'),
-    ('220052', '3256'),
-    ('220052', '3314'),
-    ('220052', '3316'),
-    ('220052', '3320'),
-    ('220052', '3322'),
-    ('220052', '5731'),
-    ('220052', '2732'),
-    ('220052', '7618'),
-    ('220052', '7620'),
-    ('220052', '7622'),
-    ('220052', '53'),
-    ('220052', '443'),
-    ('220052', '456'),
-    ('220052', '6702'),
-
-    ('618', '224690'), # -- RESPIRATORY RATE
-    ('618', '615'),
-    ('618', '220210'),
-
-    ('646', '220277'), # -- SPO2, peripheral
-
-    ('807', '811'), # -- GLUCOSE, both lab and fingerstick
-    ('807', '1529'),
-    ('807', '3745'),
-    ('807', '3744'),
-    ('807', '225664'),
-    ('807', '220621'),
-    ('807', '226537'),
-
-    ('467', '226732'), # -- O2 Delivery Device(s)
-    ('448', '224687'), # -- Minute Volume
-
-    ('1046', '223781'), # -- Pain Present
-    ('535', '224695'), # -- Peak Insp. Pressure
-    ('505', '6924' ), # -- PEEP
-    ('543', '224696'), # -- Plateau Pressure
-    ('616', '223990'), # -- Respiratory Effort
-
-    ('720', '223849'), # -- Ventilator Mode
-    ('676', '678'), # -- Temperature Celsius
-    ('676', '223761'),
-    ('676', '223762'),
-
-    ('225108', '227687'), # -- Tobacco Use History
-]
 
 ARE_EQUAL_LAB = [
     ('50806', '50902'),

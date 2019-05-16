@@ -6,14 +6,21 @@ import pandas as pd
 import numpy as np
 
 import keras
+from sklearn.metrics import f1_score
 
 from keras.callbacks import ModelCheckpoint
+from sklearn.metrics.classification import precision_score, recall_score, accuracy_score, classification_report, \
+    cohen_kappa_score, confusion_matrix
+from sklearn.metrics.ranking import roc_auc_score
 from sklearn.model_selection._split import StratifiedKFold
+from sklearn.utils.class_weight import compute_class_weight
+from tensorflow.contrib.metrics.python.ops.metric_ops import cohen_kappa
 
 from helpers.data_generators import LongitudinalDataGenerator
 from helpers.keras_callbacks import SaveModelEpoch
 from helpers.model_creators import MultilayerKerasRecurrentNNCreator
 from helpers.metrics import f1, precision, recall
+from helpers.normalization import Normalization
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -32,21 +39,21 @@ if not os.path.exists(parameters['modelCheckpointPath']):
     os.mkdir(parameters['modelCheckpointPath'])
 
 data_csv = pd.read_csv('dataset.csv')
-data_csv = data_csv.sort_values(['hadm_id'])
-data = np.array([itemid for itemid in list(data_csv['hadm_id'])
+data_csv = data_csv.sort_values(['icustay_id'])
+data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
-data_csv = data_csv[data_csv['hadm_id'].isin(data)]
+data_csv = data_csv[data_csv['icustay_id'].isin(data)]
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
-classes = np.array([ [0] if c == 'S' else [1] for c in list(data_csv['class'])])
+classes = np.array([0 if c == 'S' else 1 for c in list(data_csv['class'])])
 classes_for_stratified = np.array([ 0 if c == 'S' else 1 for c in list(data_csv['class'])])
 print('S', len([c for c in classes if c == [0]]))
 print('R', len([c for c in classes if c == [1]]))
 # Using a seed always will get the same data split even if the training stops
-kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
+kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=15)
 
 # Get input shape
 aux = pd.read_csv(data[0])
-inputShape = (parameters['dataLength'], len(aux.columns)-1)
+inputShape = (parameters['dataLength'], len(aux.columns))
 
 config = None
 if os.path.exists(parameters['modelConfigPath']):
@@ -84,8 +91,13 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             configSaver = SaveModelEpoch(parameters['modelConfigPath'],
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
         else:
-            dataTrainGenerator = LongitudinalDataGenerator(data[trainIndex], classes[trainIndex], parameters['batchSize'])
-            dataTestGenerator = LongitudinalDataGenerator(data[testIndex], classes[testIndex], parameters['batchSize'])
+            print("===== Getting values for normalization =====")
+            normalization_values = Normalization.get_normalization_values(data[trainIndex])
+            normalizer = Normalization(normalization_values)
+            print("===== Normalizing fold data =====")
+            normalized_data = np.array(normalizer.normalize_files(data))
+            dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex], classes[trainIndex], parameters['batchSize'])
+            dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex], classes[testIndex], parameters['batchSize'])
             print("========= Saving generators")
             with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
                 pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
@@ -103,15 +115,34 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             configSaver = SaveModelEpoch(parameters['modelConfigPath'],
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
 
+        class_weight = compute_class_weight('balanced', [0, 1], classes)
+        # print(class_weight)
+        # exit()
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
                          validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),
                          callbacks=[modelCheckpoint, configSaver])
-        result = kerasAdapter.evaluate(dataTestGenerator, batch_size=len(dataTestGenerator))
-        result["fold"] = i
+        result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
+        testClasses = classes[testIndex]
+        metrics = dict()
+        metrics['fscore'] =  f1_score(testClasses, result, average='weighted')
+        metrics['precision'] = precision_score(testClasses, result, average='weighted')
+        metrics['recall'] = recall_score(testClasses, result, average='weighted')
+        metrics['auc'] = roc_auc_score(testClasses, result, average='weighted')
+
+        metrics['fscore_b'] = f1_score(testClasses, result)
+        metrics['precision_b'] = precision_score(testClasses, result)
+        metrics['recall_b'] = recall_score(testClasses, result)
+        metrics['auc_b'] = roc_auc_score(testClasses, result)
+
+        metrics['kappa'] = cohen_kappa_score(testClasses, result)
+        metrics['accuracy'] = accuracy_score(testClasses, result)
+        tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
+        print(classification_report(testClasses, result))
+        metrics["fold"] = i
         if dictWriter is None:
-            dictWriter = csv.DictWriter(cvsFileHandler, result.keys())
-        if result['fold'] == 0:
+            dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
+        if metrics['fold'] == 0:
             dictWriter.writeheader()
-        dictWriter.writerow(result)
+        dictWriter.writerow(metrics)
         i += 1

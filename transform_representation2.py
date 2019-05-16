@@ -23,7 +23,7 @@ labitems_prefix = 'labevents_'
 items_prefix = 'chartevents_'
 mean_key = 'mean'
 std_key = 'std'
-csv_file_name = "organism_resistance_dataset.csv"
+csv_file_name = "organism_resistance_dataset_2.csv"
 class_label = "organism_resistence"
 interpretation_label = "interpretation"
 org_item_label = "ORG_ITEMID"
@@ -61,10 +61,34 @@ def transform_equal_columns(row):
                 row.pop(prefix + pair[1])
     return row
 
+
+def farenheit_to_celcius(events):
+    for key in events.keys():
+        if key in helper.FARENHEIT_ID:
+            events[key] = [helper.CELCIUS(temp) for temp in events[key]]
+    return events
+
+
+def change_o2_delivery_device_values(events):
+    if 'chartevents_467' in events.keys():
+        new_value = []
+        for value in events['chartevents_467']:
+            if value == 'Endotracheal tube' or value == 'Tracheostomy tube':
+                new_value.append('Endotracheal/Tracheostomy tube')
+            elif value is not None or len(value) != 0:
+                new_value.append('Other')
+            else:
+                new_value.append(None)
+        events['chartevents_467'] = new_value
+    return events
+
+
 def transform_all_features_to_row(events):
     range_re = re.compile('\d+-\d+')
     number_plus = re.compile('\d+\+')
+    events = farenheit_to_celcius(events)
     row = transform_equal_columns(events)
+    row = change_o2_delivery_device_values(row)
     # Removing NaN
     for key in row.keys():
         row[key] = [x for x in row[key] if str(x) != 'nan']
@@ -73,6 +97,10 @@ def transform_all_features_to_row(events):
         # This will register the type of each value in the series
         types = set()
         for value in row[key]:
+            try:
+                value = float(value)
+            except:
+                value = str(value)
             types.add(type(value))
         # Change to list to handle better
         types = list(types)
@@ -87,100 +115,92 @@ def transform_all_features_to_row(events):
         else:
             # Here we have mixed types on the series, here we will handle the most known cases
             # It is assumed that the final value are numerics
-            if key == 'lab_51463':
-                for i in range(len(row[key])):
-                    if row[key][i] == 'FEW':
+            for i in range(len(row[key])):
+                try:
+                    row[key][i] = float(row[key][i])
+                except:
+                    row[key][i] = str(row[key][i])
+                if isinstance(row[key][i], str):
+                    if row[key][i].lower() == 'notdone':
+                        row[key][i] = 0
+                    elif row[key][i].lower() == 'neg':
+                        row[key][i] = -1
+                    elif row[key][i].lower() == 'tr':
+                        row[key][i] = None
+                    elif row[key][i] == '-':
+                        row[key][i] = 0
+                    elif len(row[key][i].strip() ) == 0:
+                        row[key][i] = None
+                    elif range_re.match(row[key][i]):
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        try:
+                            row[key][i] = sum(numbers) / len(numbers)
+                        except:
+                            print(numbers)
+                            print("erro no regex", row[key], row[key][i])
+                    elif re.match('[-+]?\d*\.\d+|\d+ C', row[key][i]) :
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = numbers[0]
+                    elif re.match('\d+\+', row[key][i]):
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = numbers[0]
+                    elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
+                            or row[key][i].startswith('GREATER THEN'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i] == 'HIGH':
+                        row[key][i] = 0
+                    elif row[key][i] == 'no data':
+                        row[key][i] = 0
+                    elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
+                        row[key][i] = None
+                    elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
+                        row[key][i] = None
+                    elif 'VERIFIED BY DILUTION' in row[key][i]:
+                        row[key][i] = None
+                    elif row[key][i] == 'FEW':
                         row[key][i] = 1
                     elif row[key][i] == 'MOD':
                         row[key][i] = 2
                     elif row[key][i] == 'MANY':
                         row[key][i] = 3
-                row[key] = [float(w) for w in row[key] if w is not None]
-                row[key] = sum(row[key]) / len(row[key])
+                    else:
+                        print(row[key][i], "===============================")
+                        row[key][i] = None
+            row[key] = [w for w in row[key] if w is not None]
+            if len(row[key]) > 0:
+                try:
+                    row[key] = sum(row[key]) / len(row[key])
+                except:
+                    print("Deu erro aqui: ", key, row[key], '====================================')
+                    row[key] = row[key][0]
+                    continue
             else:
-                for i in range(len(row[key])):
-                    if type(row[key][i]) == type(str()):
-                        if row[key][i].lower() == 'notdone':
-                            row[key][i] = 0
-                        elif row[key][i].lower() == 'neg':
-                            row[key][i] = -1
-                        elif row[key][i].lower() == 'tr':
-                            row[key][i] = None
-                        elif row[key][i] == '-':
-                            row[key][i] = 0
-                        elif len(row[key][i].strip() ) == 0:
-                            row[key][i] = None
-                        elif range_re.match(row[key][i]):
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            try:
-                                row[key][i] = sum(numbers) / len(numbers)
-                            except:
-                                print(numbers)
-                                print("erro no regex", row[key], row[key][i])
-                        elif re.match('[-+]?\d*\.\d+|\d+ C', row[key][i]) :
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            row[key][i] = numbers[0]
-                        elif re.match('\d+\+', row[key][i]):
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            row[key][i] = numbers[0]
-                        elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
-                                or row[key][i].startswith('GREATER THEN'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key] == 'HIGH':
-                            row[key] = 0
-                        elif row[key] == 'no data':
-                            row[key] = 0
-                        elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
-                            row[key][i] = None
-                        elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
-                            row[key][i] = None
-                        elif 'VERIFIED BY DILUTION' in row[key][i]:
-                            row[key][i] = None
-                        elif row[key][i].lower() == 'mod':
-                            row[key][i] = None
-                        else:
-                            print(row[key][i], "====================================================")
-                            row[key][i] = None
-                            continue
-                row[key] = [w for w in row[key] if w is not None]
-                if len(row[key]) > 0:
-                    try:
-                        row[key] = sum(row[key]) / len(row[key])
-                    except:
-                        print("Deu erro aqui: ", key, row[key], '====================================')
-                        row[key] = row[key][0]
-                        continue
-                else:
-                    row[key] = None
-    removeKeys = ['item_228308']
-    for key in removeKeys:
-        if key in row.keys():
-            row.pop(key)
+                row[key] = None
     try:
         row = pd.DataFrame(row, index=[0])
     except:
@@ -210,7 +230,7 @@ def get_antibiotics_classes():
 def get_admission_vasopressor(icustay_id, vasopressor_durations):
     return icustay_id in vasopressor_durations['icustay_id'].values
 
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 events_files_path = mimic_data_path + 'data_organism_resistence/'
 
 dataset_patients = pd.read_csv('dataset.csv')
@@ -263,7 +283,7 @@ for index, patient in dataset_patients.iterrows():
     row_object[class_label] = patient['class']
     table = pd.concat([table, row_object], ignore_index=True)
 
-table.to_csv(csv_file_name, na_rep="?", quoting=csv.QUOTE_NONNUMERIC)
+table.to_csv(csv_file_name, na_rep="?", quoting=csv.QUOTE_NONNUMERIC, index=False)
 
 print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
 print("Size of files processed : {} bytes".format(all_size))

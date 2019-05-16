@@ -65,7 +65,7 @@ for csv_file_path in csv_file_paths:
 
     data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.20, stratify=classes)
 
-    classifiers = [MLPClassifier(), DecisionTreeClassifier(), svm.SVC(), RandomForestClassifier()]
+    classifiers = [MLPClassifier()]
     search_iterations = 140
     i = 0
 

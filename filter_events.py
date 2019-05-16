@@ -65,7 +65,7 @@ datetime_pattern = "%Y-%m-%d %H:%M:%S"
 microbiologyevent_label = "microbiologyevents"
 features_event_label = ['chartevents', 'labevents']
 event_labels = ['CHARTEVENTS', 'LABEVENTS']
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 
 events_files_path = mimic_data_path + 'data_organism_resistence/'
 if not os.path.exists(events_files_path):
@@ -100,7 +100,7 @@ hadm_ids_added = []
 ab_classes = get_antibiotics_classes()
 for index, row in patients.iterrows():
     print("####### Icustay {} #######".format(row['icustay_id']))
-    year = row['suspected_infection_time_poe'].year
+    year = row['admittime'].year
     json_path = json_files_path+str(year)+'/{}.json'.format(row['hadm_id'])
     if not os.path.exists(json_path):
         continue
