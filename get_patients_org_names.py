@@ -50,6 +50,7 @@ json_files_path = mimic_data_path+"json/"
 
 organisms = pd.DataFrame([])
 for index, row in dataset.iterrows():
+    print("####### Icustay {} #######".format(row['icustay_id']))
     year = row['admittime'].year
     json_path = json_files_path + str(year) + '/{}.json'.format(row['hadm_id'])
     patient = json.load(open(json_path))
