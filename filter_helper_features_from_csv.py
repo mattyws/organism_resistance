@@ -3,7 +3,7 @@ import csv
 import pandas as pd
 import helper
 
-data = pd.read_csv('dataset_organism_resistance_preproc.csv')
+data = pd.read_csv('dataset_organism_resistance.csv')
 columns_to_remove = []
 
 for column in data.columns:
