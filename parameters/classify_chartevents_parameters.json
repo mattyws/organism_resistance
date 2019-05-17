@@ -14,11 +14,13 @@
     "resultFilePath": "chartevents_checkpoint/result.csv",
     "dataLength" : 13,
     "outputUnits": [
+        128,
         64
     ],
     "numOutputNeurons": 1,
     "loss": "binary_crossentropy",
     "layersActivations": [
+        "relu",
         "relu"
     ],
     "gru": false,

@@ -30,8 +30,12 @@ def transform_equal_columns(buckets):
             for pair in pairs:
                 first_in_keys = prefix+pair[0]
                 second_in_keys = prefix+pair[1]
-                row[first_in_keys].extend(row[second_in_keys])
-                row.pop(second_in_keys)
+                if first_in_keys in row.keys() and second_in_keys in row.keys():
+                    row[first_in_keys].extend(row[second_in_keys])
+                    row.pop(second_in_keys)
+                elif first_in_keys not in row.keys() and second_in_keys in row.keys():
+                    row[first_in_keys] = row[second_in_keys]
+                    row.pop(second_in_keys)
         new_buckets[timestamp] = row
     return new_buckets
 
@@ -148,8 +152,10 @@ dataset_patients.loc[:,'window_starttime'] = pd.to_datetime(dataset_patients['wi
 dataset_patients.loc[:,'window_endtime'] = pd.to_datetime(dataset_patients['window_endtime'], format=DATETIME_PATTERN)
 features_chartevents = ['chartevents_'+key for key in list(helper.FEATURES_ITEMS_LABELS.keys())]
 features_labevents = ['labevents_'+key for key in list(helper.FEATURES_LABITEMS_LABELS.keys())]
-all_features = features_chartevents
-all_features.extend(features_labevents)
+# all_features = features_chartevents
+# all_features.extend(features_labevents)
+
+all_features = helper.get_attributes_from_arff('dataset_organism_resistance_manualRemove_noUseless.arff')
 
 
 

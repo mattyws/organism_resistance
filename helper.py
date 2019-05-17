@@ -1,6 +1,6 @@
 import csv
 import numpy as np
-import pandas
+import pandas as pd
 from scipy.stats import randint as sp_randint
 from scipy.stats import expon as sp_expon
 from sklearn.ensemble import RandomForestClassifier
@@ -13,7 +13,7 @@ def get_itemid_from_key(key):
     return key.split("_")[1]
 
 def load_csv_file(csv_file_path, class_label):
-    data = pandas.read_csv(csv_file_path)
+    data = pd.read_csv(csv_file_path)
     classes = data[class_label]
     data = data.drop(class_label, axis=1)
     return data, classes
@@ -402,3 +402,16 @@ DIASTOLIC_IDS = ['8368', '8440', '8441', '8555', '220180', '220051']
 
 CELCIUS = lambda Tf : ((Tf - 32)*5)/9
 MEAN_PRESSURE = lambda D, S: (2*D + S)/3
+
+def get_attributes_from_arff(file_name):
+    arff_file = open(file_name, 'r')
+    attributes = []
+    start_attribute = False
+    for line in arff_file:
+        if not start_attribute and line.startswith('@attribute'):
+            start_attribute = True
+        elif start_attribute and line.startswith('@attribute'):
+            attributes.append(line.split(' ')[1])
+        elif start_attribute and not line.startswith('@attribute'):
+            break
+    return attributes
