@@ -1,3 +1,4 @@
+import csv
 import json
 
 import pandas as pd
@@ -41,11 +42,12 @@ def get_antibiotics_classes():
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 
 dataset = pd.read_csv('dataset.csv')
+dataset = dataset.drop(columns="Unnamed: 0")
 dataset.loc[:, 'admittime'] = pd.to_datetime(dataset['admittime'], format=datetime_pattern)
 d_items = pd.read_csv('D_ITEMS.csv')
 ab_classes = get_antibiotics_classes()
 
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 json_files_path = mimic_data_path+"json/"
 
 organisms = pd.DataFrame([])
@@ -67,4 +69,4 @@ for index, row in dataset.iterrows():
     organisms = pd.concat([organisms, organism_count_label], ignore_index=True)
 
 dataset = pd.merge(dataset, organisms, how='inner', on=['icustay_id'])
-dataset.to_csv('dataset_organisms_labels.csv')
+dataset.to_csv('dataset_organisms_labels.csv', quoting=csv.QUOTE_NONNUMERIC, index=False)
