@@ -407,11 +407,19 @@ def get_attributes_from_arff(file_name):
     arff_file = open(file_name, 'r')
     attributes = []
     start_attribute = False
+    att_types = dict()
     for line in arff_file:
+        line = line.strip()
         if not start_attribute and line.startswith('@attribute'):
             start_attribute = True
         elif start_attribute and line.startswith('@attribute'):
-            attributes.append(line.split(' ')[1])
+            att_name = line.split(' ')[1]
+            attributes.append(att_name)
+            att_type = line.split(' ')[2]
+            if att_type == 'numeric':
+                att_types[att_name] = NUMERIC_LABEL
+            else:
+                att_types[att_name] = CATEGORICAL_LABEL
         elif start_attribute and not line.startswith('@attribute'):
             break
-    return attributes
+    return attributes, att_types

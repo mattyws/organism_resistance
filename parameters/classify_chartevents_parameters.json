@@ -4,7 +4,7 @@
     "datasetCsvFilePath": "dataset.csv",
     "modelCheckpointPath": "chartevents_checkpoint/",
     "modelConfigPath": "chartevents_checkpoint/config.json",
-    "dataPath" : "./data_binary/",
+    "dataPath" : "./data_binary_noUseless_wrapper/",
     "trainingDataPath" :  "./dataTrainigChartevents/",
     "testingDataPath" : "./dataTestChartevents/",
     "datasetFilesFileName": "datasetFiles.pkl",
@@ -12,7 +12,7 @@
     "trainingGeneratorPath": "chartevents_checkpoint/dataTrainGenerator.pkl",
     "testingGeneratorPath": "chartevents_checkpoint/dataTestGenerator.pkl",
     "resultFilePath": "chartevents_checkpoint/result.csv",
-    "dataLength" : 13,
+    "dataLength" : 12,
     "outputUnits": [
         128,
         64

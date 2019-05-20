@@ -5,18 +5,33 @@ import os
 
 import pandas as pd
 import numpy as np
+from pandas._libs import json
 
 import helper
 
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
-events_files_path = "./data/"
-new_events_files_path = "./data_binary/"
+parametersFilePath = "parameters/data_parameters.json"
+
+#Loading parameters file
+print("========= Loading Parameters")
+parameters = None
+with open(parametersFilePath, 'r') as parametersFileHandler:
+    parameters = json.load(parametersFileHandler)
+if parameters is None:
+    exit(1)
+
+mimic_data_path = parameters['mimicDataPath']
+events_files_path = parameters['dataPath']
+new_events_files_path = parameters['dataPathBinary']
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
 # Get categorical valued events to transform to binary, labevents doens't have any categorical event
-categorical_features_chartevents = ['chartevents' + '_' +itemid for itemid in helper.FEATURES_ITEMS_TYPE.keys()
-                                    if helper.FEATURES_ITEMS_TYPE[itemid] == helper.CATEGORICAL_LABEL]
-
+# categorical_features_chartevents = ['chartevents' + '_' +itemid for itemid in helper.FEATURES_ITEMS_TYPE.keys()
+#                                     if helper.FEATURES_ITEMS_TYPE[itemid] == helper.CATEGORICAL_LABEL]
+all_features, features_types  = helper\
+    .get_attributes_from_arff(parameters['parametersArffFile'])
+categorical_features_chartevents = [itemid for itemid in features_types.keys()
+                                    if features_types[itemid] == helper.CATEGORICAL_LABEL]
+print(len(features_types.keys()), len(categorical_features_chartevents))
 dataset_csv = pd.read_csv('dataset.csv')
 
 # Collect nominal data from values and create the binary representation
@@ -40,8 +55,10 @@ print("================ Add missing events ================")
 # Now add for each patient the binary columns for the values that doesn't appear
 for index2, patient in dataset_csv.iterrows():
     print("===== {} =====".format(patient['icustay_id']))
-    if os.path.exists(events_files_path + '{}.csv'.format(patient['icustay_id'])):
+    if os.path.exists(new_events_files_path + '{}.csv'.format(patient['icustay_id'])):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(patient['icustay_id']))
+        if 'Unnamed: 0' in events.columns:
+            events = events.drop(columns=['Unnamed: 0'])
         for itemid in nominal_events.keys():
             for value in nominal_events[itemid]:
                 if value is np.nan:

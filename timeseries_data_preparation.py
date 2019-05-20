@@ -39,7 +39,7 @@ def transform_equal_columns(buckets):
         new_buckets[timestamp] = row
     return new_buckets
 
-def preprocess_buckets(buckets):
+def preprocess_buckets(buckets, features_types):
     range_re = re.compile('\d+-\d+')
     number_plus = re.compile('\d+\+')
     # Loop all keys in the dictionary
@@ -57,18 +57,10 @@ def preprocess_buckets(buckets):
                         row[key][i] = 3
             else:
                 for i in range(len(row[key])):
-                    if key.startswith(items_prefix) and helper.FEATURES_ITEMS_TYPE[key.split('_')[1]] != helper.NUMERIC_LABEL:
+                    if features_types[key] != helper.NUMERIC_LABEL:
                         continue
                     if type(row[key][i]) == type(str()):
-                        if row[key][i].lower() == 'notdone':
-                            row[key][i] = 0
-                        elif row[key][i].lower() == 'neg':
-                            row[key][i] = -1
-                        elif row[key][i].lower() == 'tr':
-                            row[key][i] = np.nan
-                        elif row[key][i] == '-':
-                            row[key][i] = 0
-                        elif len(row[key][i].strip() ) == 0:
+                        if len(row[key][i].strip() ) == 0:
                             row[key][i] = np.nan
                         elif range_re.match(row[key][i]):
                             numbers = re.findall('\d+', row[key][i])
@@ -111,17 +103,11 @@ def preprocess_buckets(buckets):
                                 row[key][i] = 0
                             else:
                                 row[key][i] = float(numbers[0])
-                        elif row[key] == 'HIGH':
-                            row[key] = 0
-                        elif row[key] == 'no data':
-                            row[key] = 0
                         elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
                             row[key][i] = np.nan
                         elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
                             row[key][i] = np.nan
                         elif 'VERIFIED BY DILUTION' in row[key][i]:
-                            row[key][i] = np.nan
-                        elif row[key][i].lower() == 'mod':
                             row[key][i] = np.nan
                         else:
                             print(row[key][i], "====================================================")
@@ -135,7 +121,7 @@ def preprocess_buckets(buckets):
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "parameters/classify_chartevents_parameters.json"
+parametersFilePath = "parameters/data_parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -155,7 +141,7 @@ features_labevents = ['labevents_'+key for key in list(helper.FEATURES_LABITEMS_
 # all_features = features_chartevents
 # all_features.extend(features_labevents)
 
-all_features = helper.get_attributes_from_arff('dataset_organism_resistance_manualRemove_noUseless.arff')
+all_features, features_types = helper.get_attributes_from_arff(parameters['parametersArffFile'])
 
 
 
@@ -204,19 +190,18 @@ for icustayid, icustay_class in zip(dataTrain, labelsTrain):
         buckets[time_bucket] = events.loc[timestamps, :].to_dict('list')
         time_bucket += timedelta(hours=1)
     buckets = transform_equal_columns(buckets)
-    buckets = preprocess_buckets(buckets)
+    buckets = preprocess_buckets(buckets, features_types)
     events_buckets = pd.DataFrame({})
     for bucket in buckets.keys():
         events_in_bucket = dict()
         for column in buckets[bucket].keys():
-            if column.startswith(items_prefix):
-                feature_type = helper.FEATURES_ITEMS_TYPE[column.split('_')[1]]
-            elif column.startswith(labitems_prefix) :
-                feature_type = helper.FEATURES_LABITEMS_TYPE[column.split('_')[1]]
+            feature_type = features_types[column]
             if feature_type == helper.NUMERIC_LABEL:
                 if len(buckets[bucket][column]) > 0:
                     try:
                         events_in_bucket[column] = np.nanmax(buckets[bucket][column])
+                        if events_in_bucket[column] is None:
+                            events_in_bucket[column] = np.nan
                     except:
                         print(buckets[bucket][column])
                         exit()
@@ -231,11 +216,11 @@ for icustayid, icustay_class in zip(dataTrain, labelsTrain):
         events_buckets = pd.concat([events_buckets, events_in_bucket])
     events_buckets = events_buckets.sort_index()
 
-    float_cols = events.select_dtypes(include=['float64']).columns
-    str_cols = events.select_dtypes(include=['object']).columns
-
+    float_cols = [itemd for itemd in features_types.keys() if itemd in events_buckets.columns and
+                  features_types[itemd] == helper.NUMERIC_LABEL]#events.select_dtypes(include=['float64']).columns
+    # str_cols = events.select_dtypes(include=['object']).columns
     events.loc[:, float_cols] = events.loc[:, float_cols].fillna(0)
-    events.loc[:, str_cols] = events.loc[:, str_cols].fillna('Not Measured')
+    # events.loc[:, str_cols] = events.loc[:, str_cols].fillna('Not Measured')
     # events_buckets = events_buckets.fillna(0)
     # Create data file from the buckets
     events_buckets.to_csv(parameters['dataPath'] + '{}.csv'.format(icustayid))
