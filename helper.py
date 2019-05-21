@@ -4,8 +4,10 @@ import pandas as pd
 from scipy.stats import randint as sp_randint
 from scipy.stats import expon as sp_expon
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
+from sklearn.svm import SVC, LinearSVC
 from sklearn.tree.tree import DecisionTreeClassifier
 
 
@@ -38,11 +40,12 @@ class RandIntMatrix(object):
 # generate_random_numbers_tuple()
 
 PARAM_DISTS = {
-    type(MLPClassifier()): {
-        'hidden_layer_sizes': RandIntMatrix(12, 128),
-        'max_iter': [500],
-        'activation': ['relu', 'tanh', 'logistic']
-    },
+    type(MLPClassifier()).__name__: {'verbose':1, 'max_iter':200},
+    type(GaussianNB()).__name__ : {},
+    type(LinearSVC()).__name__ : {},
+    type(DecisionTreeClassifier()).__name__ : {},
+    type(RandomForestClassifier()).__name__ : {},
+    type(LogisticRegression()).__name__ : {}
 }
 
 YESNO_LABEL = "yes/no"

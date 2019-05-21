@@ -7,15 +7,13 @@ import pandas
 from sklearn import svm
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.externals import joblib
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score, cohen_kappa_score, \
     confusion_matrix
-from sklearn.model_selection import KFold
-from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network.multilayer_perceptron import MLPClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing.label import LabelEncoder
+from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 import numpy as np
 
@@ -37,7 +35,14 @@ def preprocess(data):
     return data
 
 def normalize(df, mean, std):
-    normalized_df = (df - mean) / std
+    try:
+        normalized_df = (df - mean) / std
+    except Exception as e :
+        print(e)
+        print(list(df.columns))
+        print(df.index.duplicated())
+        # for column in df.columns:
+        exit()
     normalized_df = normalized_df.replace([np.inf, -np.inf], np.nan)
     normalized_df.fillna(0, inplace=True)
     return normalized_df.values
@@ -46,10 +51,17 @@ def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
 csv_file_paths = [
+    'csvs/dataset_organism_resistance_manualRemove.csv',
+    'csvs/dataset_organism_resistance_manualRemove_IG.csv',
+    'csvs/dataset_organism_resistance_manualRemove_noUseless.csv',
+    'csvs/dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
+    'csvs/dataset_organism_resistance_noUseless.csv',
     'csvs/dataset_organism_resistance_noUseless_wrapper.csv',
-                  ]
+    'csvs/dataset_organism_resistance.csv',
+    'csvs/dataset_organism_resistance_IG.csv'
+     ]
 class_label = "organism_resistence"
-classifiers = [MLPClassifier, GaussianNB]
+classifiers = [LogisticRegression]#[MLPClassifier, GaussianNB, LinearSVC, DecisionTreeClassifier, RandomForestClassifier, LogisticRegression]
 start = time.time()
 for csv_file_path in csv_file_paths:
     with open(csv_file_path.split('/')[0]+'/result_{}.csv'.format(csv_file_path.split('/')[-1].split('.')[0]), 'a+') \
@@ -90,15 +102,17 @@ for csv_file_path in csv_file_paths:
         #     write_on_log(csv_file_path.replace('/', '_').split('.')[0], str(classifier.get_params()))
         # write_on_log(csv_file_path.replace('/', '_').split('.')[0], "========== End algorithm params =========")
 
-        # TODO: stratified kfold
-        kf = KFold(n_splits=10)
+        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=15)
         results = []
         i = 0
         while i < len(classifiers):
             print("======= Training {} ======".format(type(classifiers[i]()).__name__))
             folds = 0
-            for train_index, test_index in kf.split(data):
+            for train_index, test_index in kf.split(data, classes):
+                print("Fold {}".format(folds))
                 classifier = classifiers[i]()
+                params = helper.PARAM_DISTS[type(classifier).__name__]
+                classifier.set_params(**params)
                 data_train, data_test = data.iloc[train_index], data.iloc[test_index]
                 mean = data_train.mean()
                 std = data_train.std()
@@ -128,7 +142,9 @@ for csv_file_path in csv_file_paths:
                     metrics['fname'] = csv_file_path.split('/')[-1]
                     results.append(metrics)
                     writer.writerow(metrics)
-                    joblib.dump(classifier, './classifiers/'+type(classifier).__name__+'_{}.pkl'.format(folds))
+                    classifier_fname = './classifiers/{}_{}_fold{}.pkl'.format(csv_file_path.split('/')[-1].split('.')[0],
+                                                                               type(classifiers[i]()).__name__, folds)
+                    joblib.dump(classifier, classifier_fname)
                 except Exception as e:
                     print(e)
                     kfold_result[type(classifier)] = 0
