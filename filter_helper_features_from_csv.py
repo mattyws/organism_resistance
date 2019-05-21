@@ -3,7 +3,7 @@ import csv
 import pandas as pd
 import helper
 
-data = pd.read_csv('dataset_organism_resistance.csv')
+data = pd.read_csv('csvs/dataset_organism_resistance.csv')
 columns_to_remove = []
 
 for column in data.columns:
@@ -15,4 +15,4 @@ for column in data.columns:
             columns_to_remove.append(column)
 
 data = data.drop(columns=columns_to_remove)
-data.to_csv('dataset_organism_resistance_manual.csv', quotechar="\"", quoting=csv.QUOTE_NONNUMERIC)
+data.to_csv('csvs/dataset_organism_resistance_manual.csv', quotechar="\"", quoting=csv.QUOTE_NONNUMERIC, index=False)
