@@ -3,7 +3,7 @@
   "datasetFilesPath": "/home/mattyws/Documents/mimic_data/data_organism_resistence/",
   "datasetFilesPathBinary": "/home/mattyws/Documents/mimic_data/data_organism_resistence_binary/",
   "datasetCsvFilePath": "dataset.csv",
-  "dataPath" : "./data_IG/",
-  "dataPathBinary" : "./data_binary_IG/",
-  "parametersArffFile" : "arffs/dataset_organism_resistance_IG.arff"
+  "dataPath" : "./data_all/",
+  "dataPathBinary" : "./data_binary_all/",
+  "parametersArffFile" : "arffs/dataset_organism_resistance.arff"
 }
