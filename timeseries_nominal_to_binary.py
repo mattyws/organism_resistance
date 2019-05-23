@@ -74,7 +74,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
 partial_binarize_nominal_events = partial(binarize_nominal_events, categorical_events = categorical_features_chartevents,
                                           events_files_path=events_files_path, new_events_files_path=new_events_files_path)
 # Using as arg only the icustay_id, bc of fixating the others parameters
-args = dataset_csv['icustay_id'].to_list()
+args = list(dataset_csv['icustay_id'])
 # The results of the processes
 results = []
 # Creating the pool
