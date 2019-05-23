@@ -92,7 +92,7 @@ print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,
                                       new_events_files_path=new_events_files_path)
 with mp.Pool(processes=3) as pool:
-    pool.map(partial_binarize_nominal_events, args)
+    pool.map(partial_fill_missing_events, args)
 
 # exit()
 # for index, patient in dataset_csv.iterrows():
