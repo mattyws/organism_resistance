@@ -13,6 +13,7 @@ results_file_paths = [
 ]
 
 mean_results = pd.DataFrame([])
+classifiers_files = pd.DataFrame([])
 for file in results_file_paths:
     print(file)
     df = pd.read_csv(file)
@@ -23,5 +24,26 @@ for file in results_file_paths:
         means['classifier'] = classifer
         means['fname'] = df_classifier.iloc[0]['fname']
         mean_results = mean_results.append(means, ignore_index=True)
+        # Get classifiers that score near to the mean
+        classifier_file = dict()
+        classifier_file['classifier'] = classifer
+        classifier_file['fname'] = df_classifier.iloc[0]['fname']
+        min_value = None
+        min_index = None
+        for index, row in df_classifier.iterrows():
+            abs_value = abs(row['kappa'] - means['kappa'])
+            if min_value is None or min_value > abs_value:
+                min_value = abs_value
+                min_index = row
+        classifier_file['classifier_fname'] = '{}_{}_fold{}.pkl'.format(min_index['fname'].split('.')[0],
+                                                                        min_index['classifier'], min_index['fold'])
+        classifier_file['kappa'] = means['kappa']
+        classifier_file['fold'] = min_index['fold']
+        classifier_file = pd.DataFrame(classifier_file, index=[0])
+        classifiers_files = classifiers_files.append(classifier_file, ignore_index=True)
+
 mean_results = mean_results.set_index('fname').drop(columns=['fold', 'auc_b'])
 mean_results.to_csv('results/media_resultados.csv')
+
+classifiers_files = classifiers_files.set_index('fname')
+classifiers_files.to_csv('results/classifiers.csv')
