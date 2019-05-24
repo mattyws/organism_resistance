@@ -59,15 +59,16 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
     print("#### {} ####".format(icustay_id))
     if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
-        events = events.fillna(0)
-        if 'Unnamed: 0' in events.columns:
-            events = events.drop(columns=['Unnamed: 0'])
-        zeros = np.zeros(len(events))
-        features_not_in = all_features - set(events.columns)
-        for itemid in features_not_in:
-            events.loc[:, itemid] = pd.Series(zeros, index=events.index)
-        events = events.sort_index(axis=1)
-        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
+        if len(events.columns) != len(all_features):
+            events = events.fillna(0)
+            if 'Unnamed: 0' in events.columns:
+                events = events.drop(columns=['Unnamed: 0'])
+            zeros = np.zeros(len(events))
+            features_not_in = all_features - set(events.columns)
+            for itemid in features_not_in:
+                events.loc[:, itemid] = pd.Series(zeros, index=events.index)
+            events = events.sort_index(axis=1)
+            events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
         print("#### End {} ####".format(icustay_id))
 
 
@@ -78,7 +79,7 @@ partial_binarize_nominal_events = partial(binarize_nominal_events, categorical_e
 args = list(dataset_csv['icustay_id'])
 # If the dir already exists and it has files for all dataset already created, only loop to get all possible events
 if os.path.exists(new_events_files_path) and len(os.listdir(new_events_files_path)) == len(dataset_csv):
-    print("{} already created and have files for all dataset, fetching the columns")
+    print("{} already created and have files for all dataset, fetching the columns".format(new_events_files_path))
     file_list = [new_events_files_path + x for x in os.listdir(new_events_files_path)]
     features_after_binarized = set()
     i = 0
