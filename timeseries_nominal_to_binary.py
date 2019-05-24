@@ -26,37 +26,23 @@ events_files_path = parameters['dataPath']
 new_events_files_path = parameters['dataPathBinary']
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
-# Get categorical valued events to transform to binary, labevents doens't have any categorical event
-# categorical_features_chartevents = ['chartevents' + '_' +itemid for itemid in helper.FEATURES_ITEMS_TYPE.keys()
-#                                     if helper.FEATURES_ITEMS_TYPE[itemid] == helper.CATEGORICAL_LABEL]
+
 all_features, features_types  = helper\
     .get_attributes_from_arff(parameters['parametersArffFile'])
-categorical_features_chartevents = [itemid for itemid in features_types.keys()
-                                    if features_types[itemid] == helper.CATEGORICAL_LABEL]
-print(len(features_types.keys()), len(categorical_features_chartevents))
+categorical_features_chartevents = set([itemid for itemid in features_types.keys()
+                                    if features_types[itemid] == helper.CATEGORICAL_LABEL])
 dataset_csv = pd.read_csv('dataset.csv')
 
 def binarize_nominal_events(icustay_id, categorical_events, events_files_path, new_events_files_path):
     nominal_events = []
     print("#### {} ####".format(icustay_id))
-    # If file exists, see if there is no error when reading it, and if there is an error, delete it
-    if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
-        try:
-            df = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
-        except:
-            print("{} is in bad shape, deleting it".format(new_events_files_path + '{}.csv'.format(icustay_id)))
-            os.remove(new_events_files_path + '{}.csv'.format(icustay_id))
     if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
             not os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         # Get events and change nominal to binary
         events = pd.read_csv(events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
             events = events.drop(columns=['Unnamed: 0'])
-        nominal_in_events = [itemid for itemid in categorical_events if itemid in events.columns]
-        # for itemid in nominal_in_events:
-        #     if itemid not in nominal_events.keys():
-        #         nominal_events[itemid] = set()
-        #     nominal_events[itemid] |= set(events[itemid].dropna().unique())
+        nominal_in_events = categorical_events & set(events.columns)#[itemid for itemid in categorical_events if itemid in events.columns]
         events = pd.get_dummies(events, columns=nominal_in_events, dummy_na=False)
         nominal_events = events.columns
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
@@ -80,9 +66,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
         print("#### End {} ####".format(icustay_id))
 
 
-# Creating a partial maintaining some arguments with fixed values
-partial_binarize_nominal_events = partial(binarize_nominal_events, categorical_events = categorical_features_chartevents,
-                                          events_files_path=events_files_path, new_events_files_path=new_events_files_path)
+
 # Using as arg only the icustay_id, bc of fixating the others parameters
 args = list(dataset_csv['icustay_id'])
 # If the dir already exists and it has files for all dataset already created, only loop to get all possible events
@@ -99,6 +83,11 @@ if os.path.exists(new_events_files_path) and len(os.listdir(new_events_files_pat
         i += 1
 else:
     # If doesn't exist, go binarize the values
+    # Creating a partial maintaining some arguments with fixed values
+    partial_binarize_nominal_events = partial(binarize_nominal_events,
+                                              categorical_events=categorical_features_chartevents,
+                                              events_files_path=events_files_path,
+                                              new_events_files_path=new_events_files_path)
     # The results of the processes
     results = []
     # Creating the pool
