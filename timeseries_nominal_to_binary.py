@@ -59,12 +59,13 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
     print("#### {} ####".format(icustay_id))
     if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
+        events = events.fillna(0)
         if 'Unnamed: 0' in events.columns:
             events = events.drop(columns=['Unnamed: 0'])
-        for itemid in all_features:
-            if itemid not in events.columns:
-                events.loc[:, itemid] = pd.Series(np.zeros(len(events)), index=events.index)
-        events = events.fillna(0)
+        zeros = np.zeros(len(events))
+        features_not_in = all_features - set(events.columns)
+        for itemid in features_not_in:
+            events.loc[:, itemid] = pd.Series(zeros, index=events.index)
         events = events.sort_index(axis=1)
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
         print("#### End {} ####".format(icustay_id))
@@ -75,18 +76,30 @@ partial_binarize_nominal_events = partial(binarize_nominal_events, categorical_e
                                           events_files_path=events_files_path, new_events_files_path=new_events_files_path)
 # Using as arg only the icustay_id, bc of fixating the others parameters
 args = list(dataset_csv['icustay_id'])
-# The results of the processes
-results = []
-# Creating the pool
-with mp.Pool(processes=3) as pool:
-    results = pool.map(partial_binarize_nominal_events, args)
-
-print("========== Get new features after the dummies ==========")
-features_after_binarized = set()
-for result in results:
-    features_after_binarized |= set(result)
-features_after_binarized = list(features_after_binarized)
-print(features_after_binarized)
+# If the dir already exists and it has files for all dataset already created, only loop to get all possible events
+if os.path.exists(new_events_files_path) and len(os.listdir(new_events_files_path)) == len(dataset_csv):
+    print("{} already created and have files for all dataset, fetching the columns")
+    file_list = [new_events_files_path + x for x in os.listdir(new_events_files_path)]
+    features_after_binarized = set()
+    i = 0
+    for file in file_list:
+        if i % 1000 == 0:
+            print("Read {} files".format(i))
+        with open(file, 'r') as f:
+            features_after_binarized |= set(f.readline().split(','))
+        i += 1
+else:
+    # If doesn't exist, go binarize the values
+    # The results of the processes
+    results = []
+    # Creating the pool
+    with mp.Pool(processes=3) as pool:
+        results = pool.map(partial_binarize_nominal_events, args)
+    print("========== Get new features after the dummies ==========")
+    features_after_binarized = set()
+    for result in results:
+        features_after_binarized |= set(result)
+    # features_after_binarized = list(features_after_binarized)
 
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,

@@ -78,7 +78,7 @@ print("Creating exapliner")
 explainer = shap.KernelExplainer(best_classifier.predict, data_train)
 print("Get shap values")
 shap_values = explainer.shap_values(data_test)
+pickle.dump(explainer, open("explainer.pkl", "wb"))
 
 print("Ploting")
 shap.force_plot(explainer.expected_value[0], shap_values[0], data_test)
-pickle.dump(explainer, open("explainer.pkl", "wb"))
