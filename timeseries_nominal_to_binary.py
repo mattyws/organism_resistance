@@ -39,7 +39,15 @@ dataset_csv = pd.read_csv('dataset.csv')
 def binarize_nominal_events(icustay_id, categorical_events, events_files_path, new_events_files_path):
     nominal_events = []
     print("#### {} ####".format(icustay_id))
-    if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)):
+    # If file exists, see if there is no error when reading it, and if there is an error, delete it
+    if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
+        try:
+            df = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
+        except:
+            print("{} is in bad shape, deleting it".format(new_events_files_path + '{}.csv'.format(icustay_id)))
+            os.remove(new_events_files_path + '{}.csv'.format(icustay_id))
+    if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
+            not os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         # Get events and change nominal to binary
         events = pd.read_csv(events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
@@ -86,8 +94,8 @@ if os.path.exists(new_events_files_path) and len(os.listdir(new_events_files_pat
     for file in file_list:
         if i % 1000 == 0:
             print("Read {} files".format(i))
-        with open(file, 'r') as f:
-            features_after_binarized |= set(f.readline().split(','))
+        f = pd.read_csv(file)
+        features_after_binarized |= set(f.columns)
         i += 1
 else:
     # If doesn't exist, go binarize the values

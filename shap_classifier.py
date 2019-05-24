@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.externals import joblib
 import shap
+import os
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
 
@@ -52,7 +53,7 @@ data = data.drop(columns=['organism_resistence'])
 data = preprocess(data)
 classes = preprocess_classes(classes)
 
-# data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.05, stratify=classes)
+data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.80, stratify=classes)
 
 print("Create kfold and loop through folds")
 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=15)
@@ -71,14 +72,21 @@ data_train = normalize(data_train, mean, std)
 data_test = normalize(data_test, mean, std)
 classes_train, classes_test = classes[train_index], classes[test_index]
 
-print("Kmeans on data")
-data_train = shap.kmeans(data_train, 10)
+if os.path.exists("explainer.pkl"):
+    explainer = joblib.load(open("explainer.pkl", "rb"))
+    shap_values = joblib.load(open("shap_values.pkl", "rb"))
+    print("Ploting")
+    shap.force_plot(explainer.expected_value[0], shap_values[0], data_test)
+else:
+    print("Kmeans on data")
+    data_train = shap.kmeans(data_train, 10)
 
-print("Creating exapliner")
-explainer = shap.KernelExplainer(best_classifier.predict, data_train)
-print("Get shap values")
-shap_values = explainer.shap_values(data_test)
-pickle.dump(explainer, open("explainer.pkl", "wb"))
+    print("Creating exapliner")
+    explainer = shap.KernelExplainer(best_classifier.predict, data_train)
+    print("Get shap values")
+    shap_values = explainer.shap_values(data_test)
+    pickle.dump(explainer, open("explainer.pkl", "wb"))
+    pickle.dump(shap_values, open("shap_values.pkl", "wb"))
 
-print("Ploting")
-shap.force_plot(explainer.expected_value[0], shap_values[0], data_test)
+    print("Ploting")
+    shap.force_plot(explainer.expected_value[0], shap_values[0], data_test)
