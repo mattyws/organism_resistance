@@ -2,11 +2,13 @@ import pickle
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.externals import joblib
 import shap
 import os
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
+shap.initjs()
 
 def preprocess(data):
     data = pd.get_dummies(data, dummy_na=False)
@@ -52,8 +54,9 @@ print("Preprocessing dataset")
 data = data.drop(columns=['organism_resistence'])
 data = preprocess(data)
 classes = preprocess_classes(classes)
+columns = list(data.columns)
 
-data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.80, stratify=classes)
+# data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.80, stratify=classes, random_state=15)
 
 print("Create kfold and loop through folds")
 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=15)
@@ -76,7 +79,10 @@ if os.path.exists("explainer.pkl"):
     explainer = joblib.load(open("explainer.pkl", "rb"))
     shap_values = joblib.load(open("shap_values.pkl", "rb"))
     print("Ploting")
-    shap.force_plot(explainer.expected_value[0], shap_values[0], data_test)
+    print(explainer.expected_value)
+    shap.summary_plot(shap_values, columns, plot_type="bar")
+    # plt.savefig('test.png')
+    # print(shap_values)
 else:
     print("Kmeans on data")
     data_train = shap.kmeans(data_train, 10)

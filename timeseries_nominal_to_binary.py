@@ -50,7 +50,7 @@ def binarize_nominal_events(icustay_id, categorical_events, events_files_path, n
     return nominal_events
 
 def fill_missing_events(icustay_id, all_features, new_events_files_path):
-    print("#### {} ####".format(icustay_id))
+    print("---- {} ----".format(icustay_id))
     if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
@@ -63,7 +63,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
                 events.loc[:, itemid] = pd.Series(zeros, index=events.index)
         events = events.sort_index(axis=1)
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
-        print("#### End {} ####".format(icustay_id))
+        print("---- End {} ----".format(icustay_id))
 
 
 
