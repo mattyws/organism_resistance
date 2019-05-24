@@ -8,8 +8,6 @@ import shap
 import os
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
-shap.initjs()
-
 def preprocess(data):
     data = pd.get_dummies(data, dummy_na=False)
     data = data.fillna(0)
@@ -36,13 +34,18 @@ def normalize(df, mean, std):
 def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
+
+explainer_fname = "explainer_manual_selection2.pkl"
+shap_values_fname = "shap_values_manual_selection2.pkl"
+
 print("Get classifiers csv")
 classifiers_df = pd.read_csv('results/classifiers.csv')
 
 print("Find best classifier")
-best_classifier_row = classifiers_df[classifiers_df['kappa'] == max(classifiers_df['kappa'])].iloc[0]
+# best_classifier_row = classifiers_df[classifiers_df['kappa'] == max(classifiers_df['kappa'])].iloc[0]
+best_classifier_row = classifiers_df[ (classifiers_df['fname'] == 'dataset_organism_resistance_manual.csv')
+                                      & (classifiers_df['classifier'] == 'MLPClassifier')].iloc[0]
 dataset = best_classifier_row['fname']
-print("Loading best classifier")
 best_classifier = joblib.load(open('classifiers/{}'.format(best_classifier_row['classifier_fname']), 'rb'))
 
 print("Reading dataset")
@@ -75,12 +78,12 @@ data_train = normalize(data_train, mean, std)
 data_test = normalize(data_test, mean, std)
 classes_train, classes_test = classes[train_index], classes[test_index]
 
-if os.path.exists("explainer.pkl"):
-    explainer = joblib.load(open("explainer.pkl", "rb"))
-    shap_values = joblib.load(open("shap_values.pkl", "rb"))
+if os.path.exists(explainer_fname):
+    explainer = joblib.load(open(explainer_fname, "rb"))
+    shap_values = joblib.load(open(shap_values_fname, "rb"))
     print("Ploting")
-    print(explainer.expected_value)
-    shap.summary_plot(shap_values, columns, plot_type="bar")
+    # shap.summary_plot(shap_values, columns, plot_type="bar")
+    shap.force_plot(explainer.expected_value, shap_values, data_test, feature_names=columns, matplotlib=True)
     # plt.savefig('test.png')
     # print(shap_values)
 else:
@@ -90,9 +93,9 @@ else:
     print("Creating exapliner")
     explainer = shap.KernelExplainer(best_classifier.predict, data_train)
     print("Get shap values")
-    shap_values = explainer.shap_values(data_test)
-    pickle.dump(explainer, open("explainer.pkl", "wb"))
-    pickle.dump(shap_values, open("shap_values.pkl", "wb"))
+    shap_values = explainer.shap_values(data_test, n_sample=100, l1_reg=len(columns))
+    pickle.dump(explainer, open(explainer_fname, "wb"))
+    pickle.dump(shap_values, open(shap_values_fname, "wb"))
 
     print("Ploting")
-    shap.force_plot(explainer.expected_value[0], shap_values[0], data_test)
+    shap.summary_plot(shap_values, columns, plot_type="bar")

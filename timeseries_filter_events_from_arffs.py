@@ -49,6 +49,7 @@ for arff_file in arff_file_paths:
     if not os.path.exists(file_name):
         os.mkdir(file_name)
     features_from_arffs[file_name] = helper.get_attributes_from_arff(arff_file)[0]
+    features_from_arffs[file_name] = [x for x in features_from_arffs[file_name] if x.startswith('chartevents') or x.startswith('labevents')]
 # Read dataset file
 dataset_df = pd.read_csv('dataset.csv')
 
