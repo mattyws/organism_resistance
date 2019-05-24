@@ -48,6 +48,8 @@ def binarize_nominal_events(icustay_id, categorical_events, events_files_path, n
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
     elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
+        if 'Unnamed: 0' in events.columns:
+            events = events.drop(columns=['Unnamed: 0'])
         nominal_events = events.columns
     print("#### End {} ####".format(icustay_id))
     return nominal_events
