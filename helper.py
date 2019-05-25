@@ -426,3 +426,7 @@ def get_attributes_from_arff(file_name):
         elif start_attribute and not line.startswith('@attribute'):
             break
     return attributes, att_types
+
+def get_attributes_from_csv(file_name):
+    df = pd.read_csv(file_name)
+    return list(df.columns)

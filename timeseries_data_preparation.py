@@ -47,72 +47,77 @@ def preprocess_buckets(buckets, features_types):
     for timestamp in buckets.keys():
         row = buckets[timestamp]
         for key in row.keys():
-            if key == 'labevents_51463':
-                for i in range(len(row[key])):
-                    if row[key][i] == 'FEW':
+            for i in range(len(row[key])):
+                if features_types[key] != helper.NUMERIC_LABEL:
+                    continue
+                if type(row[key][i]) == type(str()):
+                    if row[key][i].lower() == 'notdone':
+                        row[key][i] = 0
+                    elif row[key][i].lower() == 'neg':
+                        row[key][i] = -1
+                    elif row[key][i].lower() == 'tr':
+                        row[key][i] = np.nan
+                    elif row[key][i].lower() == 'none':
+                        row[key][i] = np.nan
+                    elif len(row[key][i].strip() ) == 0:
+                        row[key][i] = np.nan
+                    elif row[key][i] == 'FEW':
                         row[key][i] = 1
                     elif row[key][i] == 'MOD':
                         row[key][i] = 2
                     elif row[key][i] == 'MANY':
                         row[key][i] = 3
-            else:
-                for i in range(len(row[key])):
-                    if features_types[key] != helper.NUMERIC_LABEL:
-                        continue
-                    if type(row[key][i]) == type(str()):
-                        if len(row[key][i].strip() ) == 0:
-                            row[key][i] = np.nan
-                        elif range_re.match(row[key][i]):
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            try:
-                                row[key][i] = sum(numbers) / len(numbers)
-                            except:
-                                print(numbers)
-                                print("erro no regex", row[key], row[key][i])
-                        elif re.match('[-+]?\d*\.\d+|\d+ C', row[key][i]) :
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            row[key][i] = numbers[0]
-                        elif re.match('\d+\+', row[key][i]):
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            row[key][i] = numbers[0]
-                        elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
-                                or row[key][i].startswith('GREATER THEN'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
-                            row[key][i] = np.nan
-                        elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
-                            row[key][i] = np.nan
-                        elif 'VERIFIED BY DILUTION' in row[key][i]:
-                            row[key][i] = np.nan
+                    elif range_re.match(row[key][i]):
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        try:
+                            row[key][i] = sum(numbers) / len(numbers)
+                        except:
+                            print(numbers)
+                            print("erro no regex", row[key], row[key][i])
+                    elif re.match('[-+]?\d*\.\d+|\d+ C', row[key][i]) :
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = numbers[0]
+                    elif re.match('\d+\+', row[key][i]):
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = numbers[0]
+                    elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
                         else:
-                            print(row[key][i], "====================================================")
-                            row[key][i] = np.nan
-                            continue
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
+                            or row[key][i].startswith('GREATER THEN'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
+                        row[key][i] = np.nan
+                    elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
+                        row[key][i] = np.nan
+                    elif 'VERIFIED BY DILUTION' in row[key][i]:
+                        row[key][i] = np.nan
+                    else:
+                        print(row[key][i], "====================================================")
+                        row[key][i] = np.nan
+                        continue
             row[key] = [value for value in row[key] if str(value) != 'nan']
         new_buckets[timestamp] = row
     return new_buckets
@@ -142,6 +147,7 @@ features_labevents = ['labevents_'+key for key in list(helper.FEATURES_LABITEMS_
 # all_features.extend(features_labevents)
 
 all_features, features_types = helper.get_attributes_from_arff(parameters['parametersArffFile'])
+print(parameters['parametersArffFile'], parameters['dataPath'], parameters['dataPathBinary'])
 
 
 
@@ -196,13 +202,15 @@ for icustayid, icustay_class in zip(dataTrain, labelsTrain):
         events_in_bucket = dict()
         for column in buckets[bucket].keys():
             feature_type = features_types[column]
+            # print(column, feature_type)
             if feature_type == helper.NUMERIC_LABEL:
                 if len(buckets[bucket][column]) > 0:
                     try:
                         events_in_bucket[column] = np.nanmax(buckets[bucket][column])
                         if events_in_bucket[column] is None:
                             events_in_bucket[column] = np.nan
-                    except:
+                    except Exception as e:
+                        print(e)
                         print(buckets[bucket][column])
                         exit()
                 else:
