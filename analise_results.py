@@ -42,7 +42,7 @@ for file in results_file_paths:
         classifier_file = pd.DataFrame(classifier_file, index=[0])
         classifiers_files = classifiers_files.append(classifier_file, ignore_index=True)
 
-mean_results = mean_results.set_index('fname').drop(columns=['fold', 'auc_b'])
+mean_results = mean_results.set_index('fname').drop(columns=['fold'])
 mean_results.to_csv('results/media_resultados.csv')
 
 classifiers_files = classifiers_files.set_index('fname')
