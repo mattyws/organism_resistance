@@ -130,6 +130,10 @@ for csv_file_path in csv_file_paths:
                     metrics['recall'] = recall_score(classes_test, predicted, average='weighted')
                     metrics['auc'] = roc_auc_score(classes_test, predicted, average='weighted')
 
+                    metrics['micro_f'] = f1_score(classes_test, predicted, average='micro')
+                    metrics['micro_p'] = precision_score(classes_test, predicted, average='micro')
+                    metrics['micro_r'] = recall_score(classes_test, predicted, average='micro')
+
                     metrics['fscore_b'] = f1_score(classes_test, predicted)
                     metrics['precision_b'] = precision_score(classes_test, predicted)
                     metrics['recall_b'] = recall_score(classes_test, predicted)

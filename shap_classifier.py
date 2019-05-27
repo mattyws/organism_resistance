@@ -38,8 +38,8 @@ def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
 
-explainer_fname = "explainer_best.pkl"
-shap_values_fname = "shap_values_best.pkl"
+explainer_fname = "explainer_best_larger_nsamples.pkl"
+shap_values_fname = "shap_values_best_larger_nsamples.pkl"
 
 print("Get classifiers csv")
 classifiers_df = pd.read_csv('results/classifiers.csv')
@@ -98,7 +98,7 @@ else:
     print("Creating exapliner")
     explainer = shap.KernelExplainer(best_classifier.predict, data_train)
     print("Get shap values")
-    shap_values = explainer.shap_values(data_test, l1_reg="aic")
+    shap_values = explainer.shap_values(data_test, n_samples=4*len(data)+2048, l1_reg="aic")
     pickle.dump(explainer, open(explainer_fname, "wb"))
     pickle.dump(shap_values, open(shap_values_fname, "wb"))
 
