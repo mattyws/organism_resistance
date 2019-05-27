@@ -37,6 +37,7 @@ def preprocess_classes(classes):
 print("Get classifiers csv")
 class_label = "organism_resistence"
 classifiers_df = pd.read_csv('results/classifiers.csv')
+classifiers_df = classifiers_df[classifiers_df['kappa'] == max(classifiers_df['kappa'])]
 
 datasets = classifiers_df['fname'].unique()
 
