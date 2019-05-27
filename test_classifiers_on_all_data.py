@@ -56,6 +56,7 @@ for dataset in datasets:
     data = normalize(data, mean, std)
     values = data.values
     for index, row in dataset_classifiers.iterrows():
+        print(row['classifier'])
         result_fname = "classified_csv/{}_{}.csv".format(row['fname'], row['classifier'])
         classifier = joblib.load('classifiers/'+row['classifier_fname'])
         predictions = classifier.predict(values)
