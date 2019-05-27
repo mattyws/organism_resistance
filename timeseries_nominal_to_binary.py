@@ -106,9 +106,6 @@ else:
         features_after_binarized |= set(result)
     # features_after_binarized = list(features_after_binarized)
 
-print(features_after_binarized)
-exit()
-
 
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,
