@@ -1,9 +1,12 @@
+import pkg_resources
+pkg_resources.require("scikit-learn==0.19.2")
 import pickle
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.externals import joblib
+
+import joblib
 import shap
 import os
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -35,8 +38,8 @@ def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
 
-explainer_fname = "explainer_best_proba.pkl"
-shap_values_fname = "shap_values_best_proba.pkl"
+explainer_fname = "explainer_best.pkl"
+shap_values_fname = "shap_values_best.pkl"
 
 print("Get classifiers csv")
 classifiers_df = pd.read_csv('results/classifiers.csv')
@@ -46,7 +49,8 @@ best_classifier_row = classifiers_df[classifiers_df['kappa'] == max(classifiers_
 # best_classifier_row = classifiers_df[ (classifiers_df['fname'] == 'dataset_organism_resistance_manual.csv')
 #                                       & (classifiers_df['classifier'] == 'MLPClassifier')].iloc[0]
 dataset = best_classifier_row['fname']
-best_classifier = joblib.load(open('classifiers/{}'.format(best_classifier_row['classifier_fname']), 'rb'))
+file = open('classifiers/{}'.format(best_classifier_row['classifier_fname']), 'rb')
+best_classifier = joblib.load(file)
 
 print("Reading dataset")
 data = pd.read_csv('csvs/'+dataset)

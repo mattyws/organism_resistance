@@ -67,16 +67,16 @@ for result_file in results_file_paths:
     for train_index, test_index in kf.split(data, classes):
         print("====== Fold {} =====".format(folds))
         folds_classifiers = results_df[results_df['fold'] == folds]
+        data_train, data_test = data.iloc[train_index], data.iloc[test_index]
+        mean = data_train.mean()
+        std = data_train.std()
+        data_test = normalize(data_test, mean, std)
+        classes_test = classes[test_index]
         for index, classifier_row in folds_classifiers.iterrows():
             print("====== {} =====".format(classifier_row['classifier']))
             classifier_fname = 'classifiers/{}_{}_fold{}.pkl'.format(classifier_row['fname'].split('.')[0],
                                                                      classifier_row['classifier'], classifier_row['fold'])
             classifier = joblib.load(open(classifier_fname, 'rb'))
-            data_train, data_test = data.iloc[train_index], data.iloc[test_index]
-            mean = data_train.mean()
-            std = data_train.std()
-            data_test = normalize(data_test, mean, std)
-            classes_test = classes[test_index]
             try:
                 predicted = classifier.predict(data_test)
                 metrics = dict()
