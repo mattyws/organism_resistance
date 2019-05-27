@@ -1,15 +1,15 @@
 import pandas as pd
 
 results_file_paths = [
-    'results/result_dataset_organism_resistance_manualRemove.csv',
-    'results/result_dataset_organism_resistance_manualRemove_IG.csv',
-    'results/result_dataset_organism_resistance_manualRemove_noUseless.csv',
-    'results/result_dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
-    'results/result_dataset_organism_resistance_noUseless.csv',
-    'results/result_dataset_organism_resistance_noUseless_wrapper.csv',
-    'results/result_dataset_organism_resistance.csv',
-    'results/result_dataset_organism_resistance_IG.csv',
-    'results/result_dataset_organism_resistance_manual.csv'
+    'results_v2/result_dataset_organism_resistance_manualRemove.csv',
+    'results_v2/result_dataset_organism_resistance_manualRemove_IG.csv',
+    'results_v2/result_dataset_organism_resistance_manualRemove_noUseless.csv',
+    'results_v2/result_dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
+    'results_v2/result_dataset_organism_resistance_noUseless.csv',
+    'results_v2/result_dataset_organism_resistance_noUseless_wrapper.csv',
+    'results_v2/result_dataset_organism_resistance.csv',
+    'results_v2/result_dataset_organism_resistance_IG.csv',
+    'results_v2/result_dataset_organism_resistance_manual.csv'
 ]
 
 mean_results = pd.DataFrame([])
@@ -43,7 +43,7 @@ for file in results_file_paths:
         classifiers_files = classifiers_files.append(classifier_file, ignore_index=True)
 
 mean_results = mean_results.set_index('fname').drop(columns=['fold'])
-mean_results.to_csv('results/media_resultados.csv')
+mean_results.to_csv('results_v2/media_resultados.csv')
 
 classifiers_files = classifiers_files.set_index('fname')
-classifiers_files.to_csv('results/classifiers.csv')
+classifiers_files.to_csv('results_v2/classifiers.csv')

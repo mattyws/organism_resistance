@@ -1,6 +1,7 @@
 """
 Creates the binary columns for nominal data, adding the columns that doesn't appear at each patients events
 """
+import csv
 import os
 from functools import partial
 
@@ -83,9 +84,10 @@ if os.path.exists(new_events_files_path) and len(os.listdir(new_events_files_pat
     for file in file_list:
         if i % 1000 == 0:
             print("Read {} files".format(i))
-        f = pd.read_csv(file)
-        features_after_binarized |= set(f.columns)
-        i += 1
+        with open(file) as file:
+            f = csv.DictReader(file)
+            features_after_binarized |= set(f.fieldnames)
+            i += 1
 else:
     # If doesn't exist, go binarize the values
     # Creating a partial maintaining some arguments with fixed values

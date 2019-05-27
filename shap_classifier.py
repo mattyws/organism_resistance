@@ -1,5 +1,5 @@
 import pkg_resources
-pkg_resources.require("scikit-learn==0.19.2")
+pkg_resources.require("scikit-learn==0.19.1")
 import pickle
 
 import pandas as pd
@@ -86,7 +86,8 @@ if os.path.exists(explainer_fname):
     explainer = joblib.load(open(explainer_fname, "rb"))
     shap_values = joblib.load(open(shap_values_fname, "rb"))
     print("Ploting")
-    shap.summary_plot(shap_values, columns)
+    # shap.dependence_plot( "vasopressor_True",shap_values, data_test, columns)
+    # shap.summary_plot(shap_values, columns)
     # shap.force_plot(explainer.expected_value, shap_values[0], data_test[0], feature_names=columns, matplotlib=True)
     # plt.savefig('test.png')
     # print(shap_values)
@@ -95,9 +96,9 @@ else:
     data_train = shap.kmeans(data_train, 10)
 
     print("Creating exapliner")
-    explainer = shap.KernelExplainer(best_classifier.predict_proba, data_train)
+    explainer = shap.KernelExplainer(best_classifier.predict, data_train)
     print("Get shap values")
-    shap_values = explainer.shap_values(data_test, l1_reg=len(columns))
+    shap_values = explainer.shap_values(data_test, l1_reg="aic")
     pickle.dump(explainer, open(explainer_fname, "wb"))
     pickle.dump(shap_values, open(shap_values_fname, "wb"))
 

@@ -17,7 +17,7 @@ def get_organism_class(events):
                     return "R"
     return "S"
 
-data = pandas.read_csv('sepsis_file2.csv')
+data = pandas.read_csv('csvs/dataset_organism_resistance_generated.csv')
 data_resistent = data[data['organism_resistence'] == 'R']
 data_nonresistent = data[data['organism_resistence'] == 'S']
 
@@ -33,45 +33,33 @@ print("Média de idade")
 print('Resistente', data_resistent_age["age"].mean())
 print('Não resistente', data_nonresistent_age["age"].mean())
 print("Distribuição genero")
-print("Resistente", data_resistent['GENDER'].value_counts().to_dict())
-print("Não resistente", data_nonresistent['GENDER'].value_counts().to_dict())
-# print("Etinicidade")
-# print("Resistente", data_resistent['ethnicity'].value_counts().to_dict())
-# print("Não resistente", data_nonresistent['ethnicity'].value_counts().to_dict())
+print("Resistente", data_resistent['sex'].value_counts().to_dict())
+print("Não resistente", data_nonresistent['sex'].value_counts().to_dict())
+print("Etinicidade")
+print("Resistente", data_resistent['ethnicity'].value_counts().to_dict())
+print("Não resistente", data_nonresistent['ethnicity'].value_counts().to_dict())
 print("Uso de vasopressores")
 print("Resistente", data_resistent['vasopressor'].value_counts().to_dict())
 print("Não resistente", data_nonresistent['vasopressor'].value_counts().to_dict())
-print("Média de SOFA")
-print("Resistente", data_resistent['sofa'].mean())
-print("Não resistente", data_nonresistent['sofa'].mean())
-print("Ventilação mecânica")
-print("Resistente", data_resistent['item_467'].value_counts().to_dict())
-print("Não resistente", data_nonresistent['item_467'].value_counts().to_dict())
+
+# print("Ventilação mecânica")
+# print("Resistente", data_resistent['item_467'].value_counts().to_dict())
+# print("Não resistente", data_nonresistent['item_467'].value_counts().to_dict())
 
 dict_patients = dict()
 print("Loading patients")
-with open('PATIENTS.csv', 'r') as patients_csv_handler:
-    dict_reader = csv.DictReader(patients_csv_handler)
-    for row in dict_reader:
-        dict_patients[row["SUBJECT_ID"]] = row
+patients_df = pandas.read_csv('PATIENTS.csv')
+admissions_df = pandas.read_csv('ADMISSIONS.csv')
+# admissions_df = pandas.merge(patients_df, admissions_df, how="inner", on=['SUBJECT_ID'])
+admissions_df['hadm_id'] = admissions_df['HADM_ID']
 
+mortality_resistant = pandas.merge(admissions_df, data_resistent, on=['hadm_id'], how='inner')
+mortality_resistant = mortality_resistant.drop_duplicates(subset='hadm_id')
+mortality_nonresistant = pandas.merge(admissions_df, data_nonresistent, on=['hadm_id'], how='inner')
+mortality_nonresistant = mortality_nonresistant.drop_duplicates(subset='hadm_id')
 
-mortality_resistent = dict()
-mortality_nonresistent = dict()
-with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
-    for line in patients_w_sepsis_handler:
-        print(line.strip().split('/')[-1])
-        patient = json.load(open(line.strip(), 'r'))
+print(len(mortality_resistant))
+print(len(mortality_nonresistant))
 
-        if "microbiologyevents" in patient.keys():
-            if get_organism_class(patient["microbiologyevents"]) == 'R':
-                if dict_patients[patient["subject_id"]]["EXPIRE_FLAG"] not in mortality_resistent.keys():
-                    mortality_resistent[dict_patients[patient["subject_id"]]["EXPIRE_FLAG"]] = 0
-                mortality_resistent[dict_patients[patient["subject_id"]]["EXPIRE_FLAG"]] += 1
-            else:
-                if dict_patients[patient["subject_id"]]["EXPIRE_FLAG"] not in mortality_nonresistent.keys():
-                    mortality_nonresistent[dict_patients[patient["subject_id"]]["EXPIRE_FLAG"]] = 0
-                mortality_nonresistent[dict_patients[patient["subject_id"]]["EXPIRE_FLAG"]] += 1
-
-print("Contagem mortalidade resistente", mortality_resistent)
-print("Contagem mortalidade não resistente", mortality_nonresistent)
+print("Resistente", mortality_resistant['HOSPITAL_EXPIRE_FLAG'].value_counts().to_dict())
+print("Não resistente", mortality_nonresistant['HOSPITAL_EXPIRE_FLAG'].value_counts().to_dict())
