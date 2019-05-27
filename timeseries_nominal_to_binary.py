@@ -96,7 +96,7 @@ else:
     # The results of the processes
     results = []
     # Creating the pool
-    with mp.Pool(processes=3) as pool:
+    with mp.Pool(processes=4) as pool:
         results = pool.map(partial_binarize_nominal_events, args)
     print("========== Get new features after the dummies ==========")
     features_after_binarized = set()
@@ -104,8 +104,12 @@ else:
         features_after_binarized |= set(result)
     # features_after_binarized = list(features_after_binarized)
 
+print(features_after_binarized)
+exit()
+
+
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,
                                       new_events_files_path=new_events_files_path)
-with mp.Pool(processes=3) as pool:
+with mp.Pool(processes=4) as pool:
     pool.map(partial_fill_missing_events, args)
