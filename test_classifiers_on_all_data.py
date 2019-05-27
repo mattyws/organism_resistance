@@ -51,6 +51,7 @@ for dataset in datasets:
         data = data.drop(columns=['Unnamed: 0'])
     classes = data[class_label]
     data = data.drop(columns=[class_label])
+    data_without_preprocessing = data.copy(deep=True)
     data = preprocess(data)
     classes = preprocess_classes(classes)
     # TODO : time is short so the k-fold mean and std is not generalized, do it after
@@ -74,7 +75,7 @@ for dataset in datasets:
         result_fname = "classified_csv/{}_{}.csv".format(row['fname'], row['classifier'])
         classifier = joblib.load('classifiers/'+row['classifier_fname'])
         predictions = classifier.predict(values)
-        new_dataset = data.copy(deep=True)
+        new_dataset = data_without_preprocessing.copy(deep=True)
         new_dataset.loc[:, 'class'] = classes
         new_dataset.loc[:, 'prediction'] = predictions
         prediction_type = []
@@ -88,5 +89,6 @@ for dataset in datasets:
             elif c == 0 and c != p:
                 prediction_type.append('FP')
         new_dataset.loc[:, 'prediction_type'] = prediction_type
+        new_dataset = new_dataset[new_dataset['class'] == 1]
         new_dataset.to_csv(result_fname)
 
