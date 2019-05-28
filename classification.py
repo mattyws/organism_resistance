@@ -51,14 +51,14 @@ def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
 csv_file_paths = [
-    # 'csvs/dataset_organism_resistance_manualRemove.csv',
-    # 'csvs/dataset_organism_resistance_manualRemove_IG.csv',
-    # 'csvs/dataset_organism_resistance_manualRemove_noUseless.csv',
-    # 'csvs/dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
-    # 'csvs/dataset_organism_resistance_noUseless.csv',
-    # 'csvs/dataset_organism_resistance_noUseless_wrapper.csv',
-    # 'csvs/dataset_organism_resistance.csv',
-    # 'csvs/dataset_organism_resistance_IG.csv',
+    'csvs/dataset_organism_resistance_manualRemove.csv',
+    'csvs/dataset_organism_resistance_manualRemove_IG.csv',
+    'csvs/dataset_organism_resistance_manualRemove_noUseless.csv',
+    'csvs/dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
+    'csvs/dataset_organism_resistance_noUseless.csv',
+    'csvs/dataset_organism_resistance_noUseless_wrapper.csv',
+    'csvs/dataset_organism_resistance.csv',
+    'csvs/dataset_organism_resistance_IG.csv',
     'csvs/dataset_organism_resistance_manual.csv'
      ]
 class_label = "organism_resistence"
@@ -68,8 +68,7 @@ for csv_file_path in csv_file_paths:
     with open(csv_file_path.split('/')[0]+'/result_{}.csv'.format(csv_file_path.split('/')[-1].split('.')[0]), 'a+') \
             as result_file_handler:
         fieldnames = ['classifier', 'fold', 'fname', 'precision', 'fscore', 'recall', 'auc', 'precision_b', 'fscore_b',
-                      'recall_b', 'auc_b',
-                      'kappa', 'accuracy', 'tp_rate']
+                      'recall_b', 'kappa', 'accuracy', 'tp_rate', 'micro_f', 'micro_p', 'micro_r']
         writer = csv.DictWriter(result_file_handler, fieldnames=fieldnames)
         writer.writeheader()
         print("============================= {} ============================".format(csv_file_path))

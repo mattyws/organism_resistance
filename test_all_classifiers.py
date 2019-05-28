@@ -80,26 +80,41 @@ for result_file in results_file_paths:
             try:
                 predicted = classifier.predict(data_test)
                 metrics = dict()
-                metrics['fscore'] = f1_score(classes_test, predicted, average='weighted')
-                metrics['precision'] = precision_score(classes_test, predicted, average='weighted')
-                metrics['recall'] = recall_score(classes_test, predicted, average='weighted')
-                metrics['auc'] = roc_auc_score(classes_test, predicted, average='weighted')
 
-                metrics['micro_f'] = f1_score(classes_test, predicted, average='micro')
-                metrics['micro_p'] = precision_score(classes_test, predicted, average='micro')
-                metrics['micro_r'] = recall_score(classes_test, predicted, average='micro')
-
-                metrics['fscore_b'] = f1_score(classes_test, predicted)
-                metrics['precision_b'] = precision_score(classes_test, predicted)
-                metrics['recall_b'] = recall_score(classes_test, predicted)
-
-                metrics['kappa'] = cohen_kappa_score(classes_test, predicted)
+                metrics['fname'] = classifier_row['fname']
+                metrics['classifier'] = classifier_row['classifier']
                 metrics['accuracy'] = accuracy_score(classes_test, predicted)
                 tn, fp, fn, metrics['tp_rate'] = confusion_matrix(classes_test, predicted).ravel()
                 metrics['tp_rate'] = metrics['tp_rate'] / (metrics['tp_rate'] + fn)
-                metrics['classifier'] = classifier_row['classifier']
-                metrics['fold'] = classifier_row['fold']
-                metrics['fname'] = classifier_row['fname']
+                metrics['kappa'] = cohen_kappa_score(classes_test, predicted)
+                metrics['auc'] = roc_auc_score(classes_test, predicted, average='weighted')
+                metrics['fscore'] = f1_score(classes_test, predicted, average='weighted')
+                metrics['macro_f'] = f1_score(classes_test, predicted, average='macro')
+
+                # metrics['fscore'] = f1_score(classes_test, predicted, average='weighted')
+                # metrics['precision'] = precision_score(classes_test, predicted, average='weighted')
+                # metrics['recall'] = recall_score(classes_test, predicted, average='weighted')
+                # metrics['auc'] = roc_auc_score(classes_test, predicted, average='weighted')
+                #
+                # metrics['micro_f'] = f1_score(classes_test, predicted, average='micro')
+                # metrics['micro_p'] = precision_score(classes_test, predicted, average='micro')
+                # metrics['micro_r'] = recall_score(classes_test, predicted, average='micro')
+                #
+                # metrics['macro_f'] = f1_score(classes_test, predicted, average='macro')
+                # metrics['macro_p'] = precision_score(classes_test, predicted, average='macro')
+                # metrics['macro_r'] = recall_score(classes_test, predicted, average='macro')
+                #
+                # metrics['fscore_b'] = f1_score(classes_test, predicted)
+                # metrics['precision_b'] = precision_score(classes_test, predicted)
+                # metrics['recall_b'] = recall_score(classes_test, predicted)
+                #
+                # metrics['kappa'] = cohen_kappa_score(classes_test, predicted)
+                # metrics['accuracy'] = accuracy_score(classes_test, predicted)
+                # tn, fp, fn, metrics['tp_rate'] = confusion_matrix(classes_test, predicted).ravel()
+                # metrics['tp_rate'] = metrics['tp_rate'] / (metrics['tp_rate'] + fn)
+                # metrics['classifier'] = classifier_row['classifier']
+                # metrics['fold'] = classifier_row['fold']
+                # metrics['fname'] = classifier_row['fname']
                 results.append(metrics)
             except Exception as e:
                 print(e)
