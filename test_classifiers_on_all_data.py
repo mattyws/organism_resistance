@@ -64,6 +64,7 @@ for dataset in datasets:
         fold += 1
     train_index, test_index = next(kf)
     data_train, data_test = data.iloc[train_index], data.iloc[test_index]
+    classes_train = classes[train_index]
     print("Get mean and std")
     mean = data_train.mean()
     std = data_train.std()
@@ -72,6 +73,7 @@ for dataset in datasets:
     values = data.values
     for index, row in dataset_classifiers.iterrows():
         print(row['classifier'])
+        print("For all data")
         result_fname = "classified_csv/{}_{}.csv".format(row['fname'], row['classifier'])
         classifier = joblib.load('classifiers/'+row['classifier_fname'])
         predictions = classifier.predict(values)
@@ -93,4 +95,18 @@ for dataset in datasets:
         new_dataset = new_dataset[new_dataset['class'] == 1]
         print(new_dataset['prediction_type'].value_counts())
         new_dataset.to_csv(result_fname)
+        print("For training data only")
+        predictions = classifier.predict(data_train.values)
+        prediction_type = []
+        for c, p in zip(classes_train, predictions):
+            if c == 1 and c == p:
+                prediction_type.append('TP')
+            elif c == 1 and c != p:
+                prediction_type.append('FN')
+            elif c == 0 and c == p:
+                prediction_type.append('TN')
+            elif c == 0 and c != p:
+                prediction_type.append('FP')
+        prediction_type = pd.Series(prediction_type)
+        print(prediction_type.value_counts())
 
