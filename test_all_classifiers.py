@@ -39,15 +39,15 @@ def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
 results_file_paths = [
-    'results/result_dataset_organism_resistance_manualRemove.csv',
+    # 'results/result_dataset_organism_resistance_manualRemove.csv',
     'results/result_dataset_organism_resistance_manualRemove_IG.csv',
-    'results/result_dataset_organism_resistance_manualRemove_noUseless.csv',
-    'results/result_dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
+    # 'results/result_dataset_organism_resistance_manualRemove_noUseless.csv',
+    # 'results/result_dataset_organism_resistance_manualRemove_noUseless_wrapper.csv',
     'results/result_dataset_organism_resistance_noUseless.csv',
     'results/result_dataset_organism_resistance_noUseless_wrapper.csv',
     'results/result_dataset_organism_resistance.csv',
     'results/result_dataset_organism_resistance_IG.csv',
-    'results/result_dataset_organism_resistance_manual.csv'
+    # 'results/result_dataset_organism_resistance_manual.csv'
 ]
 class_label = "organism_resistence"
 
