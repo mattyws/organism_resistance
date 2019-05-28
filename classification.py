@@ -62,7 +62,7 @@ csv_file_paths = [
     'csvs/dataset_organism_resistance_manual.csv'
      ]
 class_label = "organism_resistence"
-classifiers = [MLPClassifier, GaussianNB, LinearSVC, DecisionTreeClassifier, RandomForestClassifier, LogisticRegression]
+classifiers = [MLPClassifier]
 start = time.time()
 for csv_file_path in csv_file_paths:
     with open(csv_file_path.split('/')[0]+'/result_{}.csv'.format(csv_file_path.split('/')[-1].split('.')[0]), 'a+') \
@@ -137,7 +137,6 @@ for csv_file_path in csv_file_paths:
                     metrics['fscore_b'] = f1_score(classes_test, predicted)
                     metrics['precision_b'] = precision_score(classes_test, predicted)
                     metrics['recall_b'] = recall_score(classes_test, predicted)
-                    metrics['auc_b'] = roc_auc_score(classes_test, predicted)
 
                     metrics['kappa'] = cohen_kappa_score(classes_test, predicted)
                     metrics['accuracy'] = accuracy_score(classes_test, predicted)

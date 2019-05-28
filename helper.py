@@ -40,7 +40,7 @@ class RandIntMatrix(object):
 # generate_random_numbers_tuple()
 
 PARAM_DISTS = {
-    type(MLPClassifier()).__name__: {'verbose':1, 'max_iter':200},
+    type(MLPClassifier()).__name__: {'verbose':1, 'max_iter':200, 'learning_rate_init':0.00001},
     type(GaussianNB()).__name__ : {},
     type(LinearSVC()).__name__ : {},
     type(DecisionTreeClassifier()).__name__ : {},

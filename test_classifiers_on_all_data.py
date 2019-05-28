@@ -39,7 +39,9 @@ def preprocess_classes(classes):
 print("Get classifiers csv")
 class_label = "organism_resistence"
 classifiers_df = pd.read_csv('results/classifiers.csv')
-classifiers_df = classifiers_df[classifiers_df['kappa'] == max(classifiers_df['kappa'])]
+sorted_kappa = classifiers_df['kappa'].sort_values()
+higher_kappa_value = sorted_kappa.values[-7]
+classifiers_df = classifiers_df[classifiers_df['kappa'] == higher_kappa_value]
 
 datasets = classifiers_df['fname'].unique()
 
@@ -59,7 +61,7 @@ for dataset in datasets:
     kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=15)
     kf = kf.split(data, classes)
     fold = 0
-    while fold < 8:
+    while fold < 2:
         t = next(kf)
         fold += 1
     train_index, test_index = next(kf)
@@ -95,7 +97,7 @@ for dataset in datasets:
         print(new_dataset['prediction_type'].value_counts())
         new_dataset = new_dataset[new_dataset['class'] == 1]
         print(new_dataset['prediction_type'].value_counts())
-        new_dataset.to_csv(result_fname)
+        # new_dataset.to_csv(result_fname)
         print("For training data only")
         predictions = classifier.predict(data_train.values)
         prediction_type = []

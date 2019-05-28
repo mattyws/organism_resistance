@@ -38,8 +38,8 @@ def preprocess_classes(classes):
     return np.array([0 if c == 'S' else 1 for c in classes])
 
 
-explainer_fname = "explainer_best_proba.pkl"
-shap_values_fname = "shap_values_best_proba.pkl"
+explainer_fname = "explainer_best_proba2.pkl"
+shap_values_fname = "shap_values_best_proba2.pkl"
 
 print("Get classifiers csv")
 classifiers_df = pd.read_csv('results/classifiers.csv')
@@ -87,7 +87,7 @@ if os.path.exists(explainer_fname):
     shap_values = joblib.load(open(shap_values_fname, "rb"))
     print("Ploting")
     # shap.dependence_plot( "vasopressor_True",shap_values, data_test, columns)
-    # shap.summary_plot(shap_values, columns)
+    shap.summary_plot(shap_values, columns, plot_type="bar")
     # shap.force_plot(explainer.expected_value, shap_values[0], data_test[0], feature_names=columns, matplotlib=True)
     # plt.savefig('test.png')
     # print(shap_values)
@@ -98,7 +98,7 @@ else:
     print("Creating exapliner")
     explainer = shap.KernelExplainer(best_classifier.predict_proba, data_train)
     print("Get shap values")
-    shap_values = explainer.shap_values(data_test, l1_reg="aic")
+    shap_values = explainer.shap_values(data_test, l1_reg="num_features(10)")
     pickle.dump(explainer, open(explainer_fname, "wb"))
     pickle.dump(shap_values, open(shap_values_fname, "wb"))
 
