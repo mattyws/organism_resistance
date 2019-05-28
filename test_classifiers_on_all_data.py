@@ -89,6 +89,8 @@ for dataset in datasets:
             elif c == 0 and c != p:
                 prediction_type.append('FP')
         new_dataset.loc[:, 'prediction_type'] = prediction_type
+        print(new_dataset['prediction_type'].value_counts())
         new_dataset = new_dataset[new_dataset['class'] == 1]
+        print(new_dataset['prediction_type'].value_counts())
         new_dataset.to_csv(result_fname)
 
