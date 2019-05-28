@@ -70,6 +70,7 @@ for dataset in datasets:
     std = data_train.std()
     print("Normalizing data")
     data = normalize(data, mean, std)
+    data_train = normalize(data_train, mean, std)
     values = data.values
     for index, row in dataset_classifiers.iterrows():
         print(row['classifier'])
