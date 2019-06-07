@@ -7,9 +7,11 @@ import statistics
 from collections import Counter
 import sys
 import csv
+from datetime import datetime
 
 import helper
 import pandas as pd
+import numpy as np
 
 pp = pprint.PrettyPrinter(indent=5)
 date_pattern = "%Y-%m-%d"
@@ -17,11 +19,11 @@ datetime_pattern = "%Y-%m-%d %H:%M:%S"
 itemid_label = 'ITEMID'
 valuenum_label = 'valuenum'
 value_label = 'value'
-labitems_prefix = 'lab_'
-items_prefix = 'item_'
+labitems_prefix = 'labevents_'
+items_prefix = 'chartevents_'
 mean_key = 'mean'
 std_key = 'std'
-csv_file_name = "sepsis_file2.csv"
+csv_file_name = "organism_resistance_dataset_2.csv"
 class_label = "organism_resistence"
 interpretation_label = "interpretation"
 org_item_label = "ORG_ITEMID"
@@ -29,9 +31,9 @@ ab_name_label = 'ANTIBODY'
 microbiologyevent_label = "microbiologyevents"
 patient_file = 'PATIENTS.csv'
 sofa_file = 'sofa.csv'
-vasopressor_file = 'vaso_flag.csv'
+vasopressor_file = 'vasopressor_durations.csv'
 
-gender_label = 'GENDER'
+gender_label = 'sex'
 ethnicity_label = 'ethnicity'
 age_label = 'age'
 sofa_label = 'sofa'
@@ -41,149 +43,64 @@ charttime_label = 'charttime'
 itemid_label = 'ITEMID'
 item_label = 'ITEM'
 
-
-
-
-def transform_values(row, features_type):
-    for key in row:
-        itemid = helper.get_itemid_from_key(key)
-        if row[key] is not None and features_type[itemid] == helper.NUMERIC_LABEL:
-            mean = 0
-            std = 0
-            if len(row[key]) > 1:
-                mean = sum(row[key]) / len(row[key])
-                std = statistics.stdev(row[key])
-            elif len(row[key]) != 0:
-                mean = row[key][0]
-                std = 0
-            row[key] = {mean_key: mean } #, std_key: std}
-        elif row[key] is not None and features_type[itemid] == helper.CATEGORICAL_LABEL:
-                row[key] = Counter(row[key]).most_common(1)[0][0]
+def transform_equal_columns(row):
+    for prefix in [items_prefix, labitems_prefix]:
+        pairs = []
+        if prefix == labitems_prefix:
+            pairs = helper.ARE_EQUAL_LAB
+        elif prefix == items_prefix:
+            pairs = helper.ARE_EQUAL_CHART
+        for pair in pairs:
+            first_in_keys = prefix+pair[0] in row.keys()
+            second_in_keys = prefix+pair[1] in row.keys()
+            if first_in_keys and second_in_keys:
+                row[prefix + pair[0]].extend(row[prefix + pair[1]])
+                row.pop(prefix + pair[1])
+            elif second_in_keys and not first_in_keys:
+                row[prefix + pair[0]] = row[prefix + pair[1]]
+                row.pop(prefix + pair[1])
     return row
 
 
-def split_into_columns(row, features_type):
-    new_row = dict()
-    for key in row:
-        itemid = helper.get_itemid_from_key(key)
-        if features_type[itemid] == helper.NUMERIC_LABEL:
-            if row[key] is not None:
-                for key2 in row[key]:
-                    # new_row[key+"_"+key2] = row[key][key2]
-                    new_row[key] = row[key][key2]
+def farenheit_to_celcius(events):
+    for key in events.keys():
+        if key in helper.FARENHEIT_ID:
+            events[key] = [helper.CELCIUS(temp) for temp in events[key]]
+    return events
+
+
+def change_o2_delivery_device_values(events):
+    if 'chartevents_467' in events.keys():
+        new_value = []
+        for value in events['chartevents_467']:
+            if value == 'Endotracheal tube' or value == 'Tracheostomy tube':
+                new_value.append('Endotracheal/Tracheostomy tube')
+            elif value is not None or len(value) != 0:
+                new_value.append('Other')
             else:
-                # new_row[key+"_"+mean_key] = None
-                new_row[key] = None
-                # new_row[key+"_"+std_key] = 0
-        else:
-            new_row[key] = row[key]
-    return new_row
+                new_value.append(None)
+        events['chartevents_467'] = new_value
+    return events
 
 
-def transform_to_row(filtered_events, features_type, prefix=""):
-    row = dict()
-    for event in filtered_events:
-        itemid = event[itemid_label]
-        event_type  = features_type[itemid]
-        if prefix+itemid not in row.keys() and event_type == helper.NUMERIC_LABEL :
-            row[prefix+itemid] = []
-        elif event_type == helper.CATEGORICAL_LABEL:
-            row[prefix+itemid] = []
-        elif event_type == helper.YESNO_LABEL:
-            row[prefix+itemid] = 0
-
-        if event_type == helper.NUMERIC_LABEL :
-            try:
-                if itemid in helper.FARENHEIT_ID:
-                    row[prefix + itemid].append(helper.CELCIUS(float(event[valuenum_label])))
-                else:
-                    row[prefix+itemid].append(float(event[valuenum_label]))
-            except:
-                row[prefix + itemid].append(0)
-        elif event_type == helper.CATEGORICAL_LABEL:
-            row[prefix+itemid].append(event[value_label])
-        elif event_type == helper.YESNO_LABEL and row[prefix+itemid] == 0:
-            row[prefix+itemid] = 1
-    for key in features_type.keys():
-        if prefix+key not in row:
-            row[prefix+key] = None
-    row = transform_equal_columns(row, features_type, prefix=prefix)
-    row = transform_values(row, features_type)
-    row = split_into_columns(row, features_type)
-    return row
-
-def calc_meanbp_systolic_diastolic(patient_chartevents):
-    #Transformando os ids em um conjunto para facilitar o processo de verificação dos ids
-    diastolic_set = set(helper.DIASTOLIC_IDS)
-    systolic_set = set(helper.SYSTOLIC_IDS)
-    mean_set = set(helper.PRESSURE_IDS)
-    events_in_patient = dict()
-    # Pegando os tempos das medições
-    for events in patient_chartevents:
-        if events[charttime_label] not in events_in_patient.keys():
-            events_in_patient[events[charttime_label]] = set()
-        events_in_patient[events[charttime_label]].add(events[itemid_label])
-    # Verificando se foi calculado a média quando existe as pressões sistólica e diastólica
-    for time_key in events_in_patient.keys():
-        has_systolic = len(events_in_patient[time_key].intersection(systolic_set)) > 0
-        has_diastolic = len(events_in_patient[time_key].intersection(diastolic_set)) > 0
-        has_mean = len(events_in_patient[time_key].intersection(mean_set)) > 0
-        #Caso exista as pressões e não existe uma média para este tempo, calcular
-        if has_systolic and has_diastolic and not has_mean:
-            systolic_id = list(events_in_patient[time_key].intersection(systolic_set))[0]
-            diastolic_id = list(events_in_patient[time_key].intersection(diastolic_set))[0]
-            mean_value = 0
-            for event in patient_chartevents:
-                if event[charttime_label] == time_key and event[itemid_label] == systolic_id:
-                    mean_value += float(event[value_label].strip())
-                if event[charttime_label] == time_key and event[itemid_label] == diastolic_id:
-                    mean_value += 2*float(event[value_label].strip())
-            mean_value /= 3
-            new_event = dict()
-            new_event[itemid_label] = helper.PRESSURE_IDS[0]
-            new_event[value_label] = str(mean_value)
-            new_event[charttime_label] = time_key
-            patient_chartevents.append(new_event)
-    return patient_chartevents
-
-def transform_equal_columns(row, prefix=""):
-    pairs = []
-    if prefix == labitems_prefix:
-        pairs = helper.ARE_EQUAL_LAB
-    elif prefix == items_prefix:
-        pairs = helper.ARE_EQUAL_CHART
-    for pair in pairs:
-        first_in_keys = prefix+pair[0] in row.keys()
-        second_in_keys = prefix+pair[1] in row.keys()
-        if first_in_keys and second_in_keys:
-            row[prefix + pair[0]].extend(row[prefix + pair[1]])
-            row.pop(prefix + pair[1])
-        elif second_in_keys and not first_in_keys:
-            row[prefix + pair[0]] = row[prefix + pair[1]]
-            row.pop(prefix + pair[1])
-    return row
-
-def transform_all_features_to_row(events, prefix=""):
-    row = dict()
+def transform_all_features_to_row(events):
     range_re = re.compile('\d+-\d+')
-    # Register events and get their types
-    for event in events:
-        itemid = event[itemid_label]
-        # Register the key on the dictionary
-        if prefix + itemid not in row.keys():
-            row[prefix + itemid] = []
-        # Register event type (float or string)
-        try:
-            event_value = float(event[value_label].strip())
-        except ValueError:
-            event_value = event[value_label].strip()
-        row[prefix + itemid].append(event_value)
-    row = transform_equal_columns(row, prefix=prefix)
+    number_plus = re.compile('\d+\+')
+    events = farenheit_to_celcius(events)
+    row = transform_equal_columns(events)
+    row = change_o2_delivery_device_values(row)
+    # Removing NaN
+    for key in row.keys():
+        row[key] = [x for x in row[key] if str(x) != 'nan']
     # Loop all keys in the dictionary
     for key in row.keys():
         # This will register the type of each value in the series
         types = set()
         for value in row[key]:
+            try:
+                value = float(value)
+            except:
+                value = str(value)
             types.add(type(value))
         # Change to list to handle better
         types = list(types)
@@ -198,113 +115,97 @@ def transform_all_features_to_row(events, prefix=""):
         else:
             # Here we have mixed types on the series, here we will handle the most known cases
             # It is assumed that the final value are numerics
-            if key == 'lab_51463':
-                for i in range(len(row[key])):
-                    if row[key][i] == 'FEW':
+            for i in range(len(row[key])):
+                try:
+                    row[key][i] = float(row[key][i])
+                except:
+                    row[key][i] = str(row[key][i])
+                if isinstance(row[key][i], str):
+                    if row[key][i].lower() == 'notdone':
+                        row[key][i] = 0
+                    elif row[key][i].lower() == 'neg':
+                        row[key][i] = -1
+                    elif row[key][i].lower() == 'tr':
+                        row[key][i] = None
+                    elif row[key][i] == '-':
+                        row[key][i] = 0
+                    elif len(row[key][i].strip() ) == 0:
+                        row[key][i] = None
+                    elif range_re.match(row[key][i]):
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        try:
+                            row[key][i] = sum(numbers) / len(numbers)
+                        except:
+                            print(numbers)
+                            print("erro no regex", row[key], row[key][i])
+                    elif re.match('[-+]?\d*\.\d+|\d+ C', row[key][i]) :
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = numbers[0]
+                    elif re.match('\d+\+', row[key][i]):
+                        numbers = re.findall('\d+', row[key][i])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = numbers[0]
+                    elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
+                            or row[key][i].startswith('GREATER THEN'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
+                        numbers = re.findall('\d+', row[key][i])
+                        if len(numbers) == 0:
+                            row[key][i] = 0
+                        else:
+                            row[key][i] = float(numbers[0])
+                    elif row[key][i] == 'HIGH':
+                        row[key][i] = 0
+                    elif row[key][i] == 'no data':
+                        row[key][i] = 0
+                    elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
+                        row[key][i] = None
+                    elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
+                        row[key][i] = None
+                    elif 'VERIFIED BY DILUTION' in row[key][i]:
+                        row[key][i] = None
+                    elif row[key][i] == 'FEW':
                         row[key][i] = 1
                     elif row[key][i] == 'MOD':
                         row[key][i] = 2
                     elif row[key][i] == 'MANY':
                         row[key][i] = 3
-                row[key] = [float(w) for w in row[key] if w is not None]
-                row[key] = sum(row[key]) / len(row[key])
-            else:
-                for i in range(len(row[key])):
-                    if type(row[key][i]) == type(str()):
-                        if row[key][i].lower() == 'notdone':
-                            row[key][i] = 0
-                        elif row[key][i].lower() == 'neg':
-                            row[key][i] = -1
-                        elif row[key][i].lower() == 'tr':
-                            row[key][i] = None
-                        elif row[key][i] == '-':
-                            row[key][i] = 0
-                        elif len(row[key][i].strip() ) == 0:
-                            row[key][i] = None
-                        elif range_re.match(row[key][i]):
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            try:
-                                row[key][i] = sum(numbers) / len(numbers)
-                            except:
-                                print(numbers)
-                                print("erro no regex", row[key], row[key][i])
-                        elif re.match('[-+]?\d*\.\d+|\d+ C', row[key][i]) :
-                            numbers = re.findall('\d+', row[key][i])
-                            numbers = [int(n) for n in numbers]
-                            row[key][i] = numbers[0]
-                        elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
-                                or row[key][i].startswith('GREATER THEN'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
-                            numbers = re.findall('\d+', row[key][i])
-                            if len(numbers) == 0:
-                                row[key][i] = 0
-                            else:
-                                row[key][i] = float(numbers[0])
-                        elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
-                            row[key][i] = None
-                        elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
-                            row[key][i] = None
-                        elif 'VERIFIED BY DILUTION' in row[key][i]:
-                            row[key][i] = None
-                        elif row[key][i].lower() == 'mod':
-                            row[key][i] = None
-                        else:
-                            # Doest have the case, remove it from the keys
-                            print(row[key][i], "====================================================")
-                            row[key][i] = None
-                            continue
-                row[key] = [w for w in row[key] if w is not None]
+                    else:
+                        print(row[key][i], "===============================")
+                        row[key][i] = None
+            row[key] = [w for w in row[key] if w is not None]
+            if len(row[key]) > 0:
                 try:
                     row[key] = sum(row[key]) / len(row[key])
                 except:
                     print("Deu erro aqui: ", key, row[key], '====================================')
                     row[key] = row[key][0]
                     continue
-    removeKeys = ['item_228308']
-    for key in removeKeys:
-        if key in row.keys():
-            row.pop(key)
+            else:
+                row[key] = None
     try:
         row = pd.DataFrame(row, index=[0])
     except:
         pp.pprint(row)
     return row
-
-def get_data_from_admitday(json_object, date_str, key="charttime", date=False):
-    admittime = time.strptime(date_str, datetime_pattern)
-    filtered_objects = []
-    for event in json_object:
-        event_date = time.strptime(event[key], datetime_pattern)
-        if date:
-            difference = event_date.tm_mday - admittime.tm_mday
-            if difference < 2:
-                filtered_objects.append(event)
-        else:
-            difference = time.mktime(event_date) - time.mktime(admittime)
-            if abs(difference) / 86400 <= 1:
-                filtered_objects.append(event)
-        # break
-    return filtered_objects
-
-# print(len(helper.FEATURES_ITEMS_LABELS.keys()) + len(helper.FEATURES_LABITEMS_LABELS.keys()))
 
 def get_antibiotics_classes():
     antibiotics_classes = dict()
@@ -326,195 +227,66 @@ def get_antibiotics_classes():
                 antibiotics_classes[antibiotic] = ab_class
     return antibiotics_classes
 
-def get_organism_class(events, ab_classes):
-    organism_count = dict()
-    for event in events:
-        if org_item_label in event.keys():
-            if event[org_item_label] not in organism_count.keys():
-                organism_count[event[org_item_label]] = set()
-            if event[interpretation_label] == 'R':
-                organism_count[event[org_item_label]].add(ab_classes[event[ab_name_label]])
-                if len(organism_count[event[org_item_label]]) == 3:
-                    return "R"
-    return "S"
+def get_admission_vasopressor(icustay_id, vasopressor_durations):
+    return icustay_id in vasopressor_durations['icustay_id'].values
 
-def get_patient_age(patient_id, admittime_str):
-    admittime = time.strptime(admittime_str, datetime_pattern)
-    with open(patient_file, 'r') as patient_file_handler:
-        dict_reader = csv.DictReader(patient_file_handler)
-        for row in dict_reader:
-            if row['subject_id'.upper()] == patient_id:
-                dob = time.strptime(row[birth_label], datetime_pattern)
-                difference = admittime.tm_year - dob.tm_year - ((admittime.tm_mon, dob.tm_mday) < (admittime.tm_mon, dob.tm_mday))
-                return difference
-    return None
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+events_files_path = mimic_data_path + 'data_organism_resistence/'
+
+dataset_patients = pd.read_csv('dataset.csv')
+dataset_patients.loc[:, 'intime'] = pd.to_datetime(dataset_patients['intime'], format=datetime_pattern)
+
+sepsis3_df = pd.read_csv('sepsis3-df-no-exclusions.csv')
+sepsis3_df.loc[:, 'intime'] = pd.to_datetime(sepsis3_df['intime'], format=datetime_pattern)
+
+all_size = 0
+filtered_objects_total_size = 0
+table = pd.DataFrame([])
+not_processes_files = 0
+patients_with_pressure = 0
+total_events_measured = 0
+total_labevents_measured = 0
+labitems_dict = dict()
+chartevents_dict = dict()
+ab_classes = get_antibiotics_classes()
+vasopressor_durations = pd.read_csv(vasopressor_file)
+for index, patient in dataset_patients.iterrows():
+    print("#### Admission {} Icustay {}".format(patient['hadm_id'], patient['icustay_id']))
+
+    num_previous_admission = len(sepsis3_df[ (sepsis3_df['hadm_id'] == patient['hadm_id']) &
+                                                   (sepsis3_df['intime'] < patient['intime'])
+                                 ])
+    num_previous_infected_admission = len(sepsis3_df[(dataset_patients['hadm_id'] == patient['hadm_id']) &
+                                            (sepsis3_df['intime'] < patient['intime']) & (sepsis3_df['suspicion_poe'])
+                                            ])
+    sepsis3_patient = sepsis3_df[sepsis3_df['icustay_id'] == patient['icustay_id']].iloc[0]
+    suspected_infection = datetime.strptime(sepsis3_patient['suspected_infection_time_poe'], datetime_pattern)
+    diff_days = (suspected_infection - patient['intime']).days
+    patient_csv = pd.read_csv(events_files_path + '{}.csv'.format(patient['icustay_id'])).to_dict('list')
+
+    # patient_dict = dict()
 
 
-def get_admission_sofa(hadm_id):
-    with open(sofa_file, 'r') as sofa_file_handler:
-        dict_reader = csv.DictReader(sofa_file_handler)
-        for row in dict_reader:
-            if row['hadm_id'] == hadm_id:
-                return row['sofa']
-    return None
+    row_object = transform_all_features_to_row(patient_csv)
+    # row_labevent = transform_all_features_to_row(filtered_labevents_object, prefix=labitems_prefix)
 
+    row_object['hadm_id'] = patient['hadm_id']
+    row_object['icustay_id'] = patient['icustay_id']
+    row_object[gender_label] = patient[gender_label]
+    row_object[ethnicity_label] = patient[ethnicity_label]
+    row_object[age_label.lower()] = patient['age']
+    row_object['prev_hadm'] = num_previous_admission
+    row_object['prev_infection_hadm'] = num_previous_infected_admission
+    row_object['days_until_suspicion'] = diff_days
+    # row_object[sofa_label] = get_admission_sofa(patient['hadm_id'])
+    row_object[vaso_label] = get_admission_vasopressor(patient['icustay_id'], vasopressor_durations)
+    row_object[class_label] = patient['class']
+    table = pd.concat([table, row_object], ignore_index=True)
 
-def get_admission_vasopressor(hadm_id):
-    with open(vasopressor_file, 'r') as vasopressor_file_handler:
-        dict_reader = csv.DictReader(vasopressor_file_handler)
-        for row in dict_reader:
-            if row['hadm_id'] == hadm_id:
-                return row['vaso_flag']
-    return None
+table.to_csv(csv_file_name, na_rep="?", quoting=csv.QUOTE_NONNUMERIC, index=False)
 
-def generate_patient_admissions_dict():
-    admissions_df = pd.read_csv('./ADMISSIONS.csv')
-    patients_admissions = dict()
-    for index, row in admissions_df.iterrows():
-        if row['SUBJECT_ID'] not in patients_admissions.keys():
-            patients_admissions[str(row['SUBJECT_ID'])] = dict()
-        patients_admissions[str(row['SUBJECT_ID'])][str(row['HADM_ID'])] = row['ADMITTIME']
-    return patients_admissions
-
-def get_patients_previous_admissions(patient_id, current_admit_id, current_admit_time, patient_admissions_dict):
-    current_admit_strptime = time.strptime(current_admit_time, datetime_pattern)
-    num_previous_admission = 0
-    for patient_admission in patient_admissions_dict[patient_id].keys():
-        if patient_admission != current_admit_id:
-            patient_admission_strptime = time.strptime(patient_admissions_dict[patient_id][patient_admission],
-                                                       datetime_pattern)
-            difference = current_admit_strptime.tm_year - patient_admission_strptime.tm_year
-            if difference >= 0 and difference <= 1 :
-                num_previous_admission += 1
-    return num_previous_admission
-
-print("========== Generating patient admissions dictionary ==========")
-patients_admissions = generate_patient_admissions_dict()
-
-with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
-    with open(csv_file_name, 'w') as csv_file_handler:
-        csv_writer = None
-        all_size = 0
-        filtered_objects_total_size = 0
-        table = pd.DataFrame([])
-        not_processes_files = 0
-        patients_with_pressure = 0
-        total_events_measured = 0
-        total_labevents_measured = 0
-        labitems_dict = dict()
-        chartevents_dict = dict()
-        ab_classes = get_antibiotics_classes()
-        for line in patients_w_sepsis_handler:
-            print(line.strip().split('/')[-1])
-            all_size += os.path.getsize(line.strip())
-            patient = json.load(open(line.strip(), 'r'))
-            patient_age = get_patient_age(patient['subject_id'], patient['admittime'])
-            if microbiologyevent_label in patient.keys() and (patient_age > 18 and patient_age < 80):
-                num_previous_admission = get_patients_previous_admissions(patient['subject_id'], patient['hadm_id'],
-                                                                          patient['admittime'], patients_admissions)
-                # Filtrando eventos que aconteceram nas primeiras 24h de internação do paciente
-                filtered_chartevents_object = []
-                # print("Getting events")
-                if 'chartevents' in patient.keys():
-                    filtered_chartevents_object = get_data_from_admitday(patient['chartevents'], patient['admittime'],
-                                                                         key='charttime', date=False)
-                    filtered_objects_total_size += sys.getsizeof(filtered_chartevents_object)
-
-                # continue
-                filtered_labevents_object = []
-                if 'labevents' in patient.keys():
-                    filtered_labevents_object = get_data_from_admitday(patient['labevents'], patient['admittime'],
-                                                                           key='charttime', date=False)
-                    filtered_objects_total_size += sys.getsizeof(filtered_labevents_object)
-
-                new_filtered_chartevents = []
-                for event in filtered_chartevents_object:
-                    # if event['ITEMID'] not in chartevents_dict.keys():
-                    #     chartevents_dict[event['ITEMID']] = dict()
-                    #     chartevents_dict[event['ITEMID']]['label'] = event['ITEM']
-                    #     chartevents_dict[event['ITEMID']]['count'] = 0
-                    # chartevents_dict[event['ITEMID']]['count'] += 1
-                    # Removing error events
-                    if len(event['error']) != 0 and int(event['error']) == 0:
-                        new_filtered_chartevents.append(event)
-
-                new_filtered_chartevents = calc_meanbp_systolic_diastolic(new_filtered_chartevents)
-
-                # total_events_measured += len(new_filtered_chartevents)
-                # total_labevents_measured += len(filtered_labevents_object)
-                #
-                # for event in filtered_labevents_object:
-                #     if event['ITEMID'] not in labitems_dict.keys():
-                #         labitems_dict[event['ITEMID']] = dict()
-                #         labitems_dict[event['ITEMID']]['label'] = event['ITEM']
-                #         labitems_dict[event['ITEMID']]['count'] = 0
-                #     labitems_dict[event['ITEMID']]['count'] += 1
-
-                # new_filtered_chartevents = []
-                # for event in filtered_chartevents_object:
-                #     if event[itemid_label] in helper.FEATURES_ITEMS_LABELS.keys():
-                #         new_filtered_chartevents.append(event)
-                #         chartevents_set.add(event['ITEM'])
-                #
-                # # for event in filtered_chartevents_object:
-                # #     try:
-                # #         print(event['ITEM'], '--->', type(int(event['value'])), '--->', event['valuenum'])
-                # #     except ValueError:
-                # #         try:
-                # #             print(event['ITEM'], '--->', type(float(event['value'])), '--->', event['valuenum'])
-                # #         except ValueError:
-                # #             print(event['ITEM'], '--->', type(event['value']), '--->', event['valuenum'])
-                #
-                # new_filtered_labevents = []
-                # for event in filtered_labevents_object:
-                #     if event[itemid_label] in helper.FEATURES_LABITEMS_LABELS.keys():
-                #         new_filtered_labevents.append(event)
-                #         labitems_set.add(event['ITEM'])
-                #
-                # row_object = transform_to_row(new_filtered_chartevents, helper.FEATURES_ITEMS_TYPE, prefix=items_prefix)
-                # row_labevent = transform_to_row(new_filtered_labevents, helper.FEATURES_LABITEMS_TYPE, prefix=labitems_prefix)
-
-                # print("Transforming to row")
-                row_object = transform_all_features_to_row(new_filtered_chartevents, prefix=items_prefix)
-                row_labevent = transform_all_features_to_row(filtered_labevents_object, prefix=labitems_prefix)
-
-                for key in row_labevent.keys():
-                    row_object[key] = row_labevent[key]
-                row_object['subject_id'] = patient['subject_id']
-                row_object['hadm_id'] = patient['hadm_id']
-                row_object[class_label] = get_organism_class(patient[microbiologyevent_label], ab_classes)
-                row_object[gender_label] = patient[gender_label]
-                row_object[ethnicity_label] = patient[ethnicity_label]
-                row_object[age_label.lower()] = patient_age
-                row_object['prev_hadm'] = num_previous_admission
-                row_object[sofa_label] = get_admission_sofa(patient['hadm_id'])
-                row_object[vaso_label] = get_admission_vasopressor(patient['hadm_id'])
-
-                table = pd.concat([table, row_object], ignore_index=True)
-            else:
-                not_processes_files += 1
-
-        # Getting all fields in file
-        # fieldnames = sorted(list(set(k for d in table for k in d)))
-        # csv_writer = csv.DictWriter(csv_file_handler, fieldnames, quotechar='\"', quoting=csv.QUOTE_NONNUMERIC)
-        # csv_writer.writeheader()
-        # for row in table:
-        #     csv_writer.writerow(row)
-        table.to_csv(csv_file_name, na_rep="?", quoting=csv.QUOTE_NONNUMERIC)
-
-        print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
-        print("Size of files processed : {} bytes".format(all_size))
-        print("Total size of filtered variables : {} bytes".format(filtered_objects_total_size))
-        print("Total events measured: {} chartevents, {} labevents".format(total_events_measured, total_labevents_measured))
-
-        with open('labevents_in_dataset.csv', 'w+') as labitems_handler:
-            for item in labitems_dict.keys():
-                labitems_handler.write('{},{},{}\n'.format(item, labitems_dict[item]['label'].replace(',', ' - '),
-                                                           labitems_dict[item]['count']))
-
-        with open('chartevents_in_dataset.csv', 'w+') as chart_handler:
-            for item in chartevents_dict.keys():
-                chart_handler.write('{},{},{}\n'.format(item, chartevents_dict[item]['label'].replace(',', ' - '),
-                                                        chartevents_dict[item]['count']))
-
+print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
+print("Size of files processed : {} bytes".format(all_size))
+print("Total size of filtered variables : {} bytes".format(filtered_objects_total_size))
+print("Total events measured: {} chartevents, {} labevents".format(total_events_measured, total_labevents_measured))
 

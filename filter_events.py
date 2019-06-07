@@ -1,5 +1,7 @@
 """
-Filter all events from chartevents and labevents for each patient at the dataset
+Filter all events from chartevents and labevents for each patient that have a suspicion of infection, using the work
+"A Comparative Analysis of Sepsis Identification Methods in an Electronic Database".
+Follow the repository at github (https://github.com/alistairewj/sepsis3-mimic) for more details.
 """
 import csv
 import json
@@ -17,9 +19,9 @@ import helper
 def get_organism_class(events, ab_classes):
     organism_count = dict()
     org_item_label = "ORG_ITEMID"
-    interpretation_label = "interpretation"
-    ab_name_label = 'ANTIBODY'
-    for event in events:
+    interpretation_label = "INTERPRETATION"
+    ab_name_label = 'AB_NAME'
+    for index, event in events.iterrows():
         if org_item_label in event.keys():
             if event[org_item_label] not in organism_count.keys():
                 organism_count[event[org_item_label]] = set()
@@ -60,14 +62,24 @@ def get_patient_age(patient_id, admittime_str):
                 return difference
     return None
 
+parametersFilePath = "parameters/data_parameters.json"
 
-datetime_pattern = "%Y-%m-%d %H:%M:%S"
-microbiologyevent_label = "microbiologyevents"
+#Loading parameters file
+print("========= Loading Parameters")
+parameters = None
+with open(parametersFilePath, 'r') as parametersFileHandler:
+    parameters = json.load(parametersFileHandler)
+if parameters is None:
+    exit(1)
+
+# Defining some helper variables
+datetime_pattern = parameters['datetimePattern']
 features_event_label = ['chartevents', 'labevents']
-event_labels = ['CHARTEVENTS', 'LABEVENTS']
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = parameters['mimicDataPath']
+microbiologyevents_path = mimic_data_path + 'MICROBIOLOGYEVENTS/'
+events_directories = [mimic_data_path + 'CHARTEVENTS/CHARTEVENTS_', mimic_data_path+'LABEVENTS/LABEVENTS_']
 
-events_files_path = mimic_data_path + 'data_organism_resistence/'
+events_files_path = parameters['datasetFilesPath']
 if not os.path.exists(events_files_path):
     os.mkdir(events_files_path)
 
@@ -81,36 +93,23 @@ admissions = pd.read_csv('ADMISSIONS.csv')
 admissions['hadm_id'] = admissions['HADM_ID']
 
 patients = pd.merge(patients, admissions, how="inner", on=['hadm_id'])
-patients.loc[:, 'ADMITTIME'] = pd.to_datetime(patients['ADMITTIME'], format=datetime_pattern)
+patients.loc[:, 'admittime'] = pd.to_datetime(patients['ADMITTIME'], format=datetime_pattern)
 
-# diff_days = (patients['suspected_infection_time_poe'] - patients['intime']).apply(lambda d: d.days)
-# print(len(patients[diff_days < 0]))
-# exit()
-
-json_files_path = mimic_data_path+"json/"
-# files_paths = []
-# for index, patient in patients.iterrows():
-#     year = patient['suspected_infection_time_poe'].year
-#     files_paths.append(json_files_path+str(year)+'/{}.json'.format(patient['hadm_id']))
-
-# patients = open('sepsis_patients4')
-# Loop through all patients that fits the sepsis 3 definition
 dataset_csv = []
 hadm_ids_added = []
 ab_classes = get_antibiotics_classes()
 for index, row in patients.iterrows():
-    print("####### Icustay {} #######".format(row['icustay_id']))
+    print("####### Icustay {} Admission {} #######".format(row['icustay_id'], row['hadm_id']))
     year = row['admittime'].year
-    json_path = json_files_path+str(year)+'/{}.json'.format(row['hadm_id'])
-    if not os.path.exists(json_path):
-        continue
-    patient = json.load(open(json_path))
     patient_age = row['age']# get_patient_age(patient['subject_id'], patient['admittime'])
-    if microbiologyevent_label not in patient.keys() or (patient_age < 18 or patient_age > 80):
+    if not os.path.exists(microbiologyevents_path+'MICROBIOLOGYEVENTS_{}.csv'.format(row['hadm_id'])) :
+        print("{} does not exist!".format(microbiologyevents_path+'{}.csv'.format(row['hadm_id'])))
+        continue
+    if patient_age < 18 or patient_age > 80:
         print("Patient age: {}".format(patient_age))
         continue
     intime = row['intime'] # datetime.strptime(patient['admittime'], datetime_pattern)
-    diff = row['suspected_infection_time_poe'] - intime
+    diff = intime - row['suspected_infection_time_poe']
     if diff.days < 0:
         continue
     if diff.days == 0 and diff.seconds/3600 < 12:
@@ -120,24 +119,24 @@ for index, row in patients.iterrows():
         window_start = row['suspected_infection_time_poe'] - timedelta(hours=12)
         cut_poe = row['suspected_infection_time_poe']  # intime + timedelta(hours=24)
     events_in_patient = dict()
-    for feature_event_label in features_event_label:
+    for feature_event_label, events_directory in zip(features_event_label, events_directories):
         # Loading event csv
-        if feature_event_label not in patient.keys():
+        if not os.path.exists(events_directory+'{}.csv'.format(row['hadm_id'])):
             continue
-        events_df = patient[feature_event_label]
+        events_df = pd.read_csv(events_directory+'{}.csv'.format(row['hadm_id']))
         # Filter events that occurs between ICU intime and ICU outtime, as the csv corresponds to events that occurs
         # to all hospital admission
         print("==== Looping {} events for {} ====".format(feature_event_label, row['icustay_id']))
-        for event in events_df:
-            event['charttime'] = datetime.strptime(event['charttime'], datetime_pattern)
-            if event['charttime'] >= window_start and event['charttime'] <= cut_poe:
+        for index2, event in events_df.iterrows():
+            event['CHARTTIME'] = datetime.strptime(event['CHARTTIME'], datetime_pattern)
+            if event['CHARTTIME'] >= window_start and event['CHARTTIME'] <= cut_poe:
                 # Get values and store into a variable, just to read easy and if the labels change
                 itemid = event['ITEMID']
-                event_timestamp = event['charttime']
-                if event['valuenum'] is None or (event['valuenum'] is not None and len(event['valuenum']) == 0):
-                    event_value = str(event['value'])
+                event_timestamp = event['CHARTTIME']
+                if event['VALUENUM'] is None:
+                    event_value = str(event['VALUE'])
                 else:
-                    event_value = float(event['valuenum'])
+                    event_value = float(event['VALUENUM'])
                 # If the id is not in events yet, create it and assign a empty dictionary to it
                 if event_timestamp not in events_in_patient.keys():
                     events_in_patient[event_timestamp] = dict()
@@ -147,10 +146,10 @@ for index, row in patients.iterrows():
                 # It is to check if a same event is masured more than one time at the same timestamp
                 if itemid in events_in_patient[event_timestamp].keys():
                     if event_value > events_in_patient[event_timestamp][feature_event_label+'_'+itemid]:
-                        events_in_patient[event_timestamp][feature_event_label+'_'+itemid] = event_value
+                        events_in_patient[event_timestamp][feature_event_label+'_'+str(itemid)] = event_value
                 else:
                     # Else just create the field and assign its value
-                    events_in_patient[event_timestamp][feature_event_label+'_'+itemid] = event_value
+                    events_in_patient[event_timestamp][feature_event_label+'_'+str(itemid)] = event_value
     print("Converting to dataframe")
     patient_data = pd.DataFrame([])
     for event_timestamp in events_in_patient.keys():
@@ -161,7 +160,8 @@ for index, row in patients.iterrows():
         patient_data = patient_data.sort_values(by=['event_timestamp'])
         patient_data.to_csv(events_files_path + '{}.csv'.format(row['icustay_id']), quoting=csv.QUOTE_NONNUMERIC,
                             index=False)
-        organism_resistance = get_organism_class(patient[microbiologyevent_label], ab_classes)
+        patient_microbiologyevents = pd.read_csv(microbiologyevents_path+'MICROBIOLOGYEVENTS_{}.csv'.format(row['hadm_id']))
+        organism_resistance = get_organism_class(patient_microbiologyevents, ab_classes)
         if row['icustay_id'] not in hadm_ids_added:
             dataset_csv.append(
                 {'hadm_id': row['hadm_id'],

@@ -1,9 +1,10 @@
 {
-  "mimicDataPath" : "/home/mattyws/Documents/mimic_data/",
-  "datasetFilesPath": "/home/mattyws/Documents/mimic_data/data_organism_resistence/",
-  "datasetFilesPathBinary": "/home/mattyws/Documents/mimic_data/data_organism_resistence_binary/",
+  "mimicDataPath" : "/home/mattyws/Documentos/mimic/",
+  "datasetFilesPath": "/home/mattyws/Documentos/mimic/data_organism_resistence/",
+  "datasetFilesPathBinary": "/home/mattyws/Documentos/mimic/data_organism_resistence_binary/",
   "datasetCsvFilePath": "dataset.csv",
   "dataPath" : "./data_all/",
   "dataPathBinary" : "./data_binary_all/",
-  "parametersArffFile" : "arffs/dataset_organism_resistance.arff"
+  "parametersArffFile" : "arffs/dataset_organism_resistance.arff",
+  "datetimePattern" : "%Y-%m-%d %H:%M:%S"
 }
